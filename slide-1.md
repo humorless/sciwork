@@ -47,17 +47,11 @@ style: |
 
 **具體情景：Supply chain 的 BOM**
 
-```
-零件 X
-  └─ 依賴 → 零件 A（來自供應商 S1）
-  └─ 依賴 → 零件 B
-               └─ 依賴 → 零件 C（來自供應商 S2）
-               └─ 依賴 → 零件 D（來自供應商 S2）
-```
+![BOM diagram w:480px](images/slide-1-bom.png)
 
-**你要解的問題**：零件 X 斷貨，哪些上游供應商受影響？
+**你要解的問題**：零件 X 要生產，依賴哪些上游供應商？如果其中一個斷料，風險在哪裡？
 
-這個「依賴」是事實，不是外鍵的副產品。
+在 supply chain 的情境，「依賴」（邊）就是分析的主角。
 
 ---
 
@@ -70,9 +64,7 @@ style: |
 | 多跳 = 多層 JOIN | 多跳 = 沿邊走 |
 
 **演算法橋接**：
-「找出所有上游依賴」就是 **BFS**
-
-你以前在 application layer 自己實作，現在讓 DB 直接算
+「找出所有上游依賴」是一個 graph traversal 問題，BFS / DFS 都可以解
 
 ---
 
@@ -82,9 +74,9 @@ style: |
 
 | 方式 | 做法 | 代價 |
 |------|------|------|
-| Application layer | Python + NetworkX | 資料要搬出來，量大就崩 |
-| RDBMS + recursive CTE | SQL WITH RECURSIVE | 可行，但 query 很快失控 |
-| Graph DB | Cypher 原生查詢 | 資料不動，演算法進去 |
+| Application layer | Python + NetworkX | 需要搬移大量資料 |
+| RDBMS + recursive CTE | SQL WITH RECURSIVE | SQL Query 難以閱讀 |
+| Graph DB | Cypher 原生查詢 | 複雜的圖演算法，需要 UDF |
 
 **沒有絕對的對錯，但有適合的情境**
 
@@ -99,7 +91,7 @@ style: |
 **選 Graph DB**：
 - 多跳查詢是常態（3 跳以上）
 - 關係本身要存屬性
-- 需要 in-database 演算法
+- 資料量大，需要 in-database analytics
 
 ---
 
@@ -111,7 +103,7 @@ style: |
 (a:Component)-[:DEPENDS_ON]->(b:Component)
 ```
 
-這不是語法糖，這就是語意。
+你看到的形狀，就是你要查的結構——語法反映語意。
 
 ---
 
@@ -131,23 +123,93 @@ curl -fsSL https://install.ladybugdb.com | sh
 
 ---
 
-# Graph Model：三個元素
+# 元素 #1：節點（Node）
 
-**節點（Node）**：實體物件
+**節點 = 有獨立身份的實體**
 
-```cypher
-(c:Component {name: 'CPU', critical: true})
-(s:Supplier  {name: 'TSMC', country: 'TW'})
+```
+  ┌─────────────────────────┐
+  │        Component        │  ← Label（類型）
+  ├─────────────────────────┤
+  │  name:     "CPU"        │  ← Properties
+  │  critical: true         │
+  └─────────────────────────┘
+
+  ┌─────────────────────────┐
+  │        Supplier         │
+  ├─────────────────────────┤
+  │  name:    "TSMC"        │
+  │  country: "TW"          │
+  └─────────────────────────┘
 ```
 
-**關係（Relationship）**：有方向、有類型
+---
 
-```cypher
-(s)-[:SUPPLIES {lead_time: 30}]->(c)
-(a)-[:DEPENDS_ON {quantity: 2}]->(b)
+# 元素 #2：關係（Relationship）
+
+**關係 = 有方向、有類型的連接，本身也可以有屬性**
+
+```
+  ┌──────────┐                      ┌──────────┐
+  │  TSMC    │ ──── SUPPLIES ──────► │  CPU     │
+  └──────────┘   lead_time: 30      └──────────┘
+
+  ┌──────────┐                      ┌──────────┐
+  │ CPU_MOD  │ ── DEPENDS_ON ──────► │  CPU     │
+  └──────────┘   quantity: 1        └──────────┘
 ```
 
-**屬性（Property）**：節點和關係都可以有
+關係不是 JOIN 之後才出現的，它是一等公民——有名字、有方向、有屬性。
+
+---
+
+# 元素 #3：把它們組合起來
+
+**一個小型 Supply chain graph 長這樣：**
+
+![Element 3 diagram w:610px](images/slide-1-element-3.png)
+
+節點 = 圓框，關係 = 箭頭，屬性 = 貼在上面的標籤
+
+---
+
+# Modeling 思考：什麼該是節點？關係？
+
+**判斷原則**
+
+| 應該是節點 | 應該是關係 |
+|-----------|-----------|
+| 有獨立身份，在多個地方被參照 | 描述兩個實體之間「發生了什麼」 |
+| 有多個屬性要存 | 可以用動詞描述（DEPENDS_ON、SUPPLIES） |
+| 未來可能有更多連接 | 本身不需要被其他東西「指向」 |
+
+**Supply chain 示範**：
+- `Component` → 節點（被多個人依賴、有名稱/屬性）
+- `DEPENDS_ON` → 關係（描述零件之間「依賴」這件事）
+- `quantity: 2` → 關係上的屬性（這個依賴需要幾個）
+
+---
+
+# Basic Cypher Syntax
+
+**四個最常用的 clause：**
+
+```cypher
+MATCH  (n:Label {property: value})-[:TYPE]->(m)   -- 找符合的 pattern
+WHERE  n.property > 10                             -- 進一步過濾
+RETURN n.name, m.name                              -- 選擇輸出
+LIMIT  10                                          -- 限制筆數
+```
+
+**建立資料：**
+
+```cypher
+CREATE (c:Component {name: 'CPU', critical: true})
+CREATE (s:Supplier  {name: 'TSMC'})
+CREATE (s)-[:SUPPLIES {lead_time: 30}]->(c)
+```
+
+**語法直覺**：MATCH 的 pattern 就是你要找的圖的形狀。
 
 ---
 
