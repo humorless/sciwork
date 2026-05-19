@@ -112,7 +112,6 @@ style: |
 - **Embedded**：跑在你的 process 裡，不需要起 server
 - **Columnar**：columnar storage，分析查詢快
 - **MIT License**：開源，可商用
-- **Kuzu 的繼承者**：研究血統（VLDB 2023），production-ready
 
 ```bash
 # 安裝
@@ -216,17 +215,22 @@ CREATE (s)-[:SUPPLIES {lead_time: 30}]->(c)
 # 今天的 Dataset：Supply Chain BOM
 
 ```
-Supplier S1 ──SUPPLIES──► Component A
-Supplier S2 ──SUPPLIES──► Component B
-Supplier S2 ──SUPPLIES──► Component C
+Supplier S1 ──SUPPLIES──► Component A  (lead_time: 14)
+Supplier S1 ──SUPPLIES──► Component D  (lead_time: 30)
+Supplier S2 ──SUPPLIES──► Component B  (lead_time: 21)
+Supplier S2 ──SUPPLIES──► Component C  (lead_time:  7)
+Supplier S2 ──SUPPLIES──► Component E  (lead_time: 14)
 
-Component X ──DEPENDS_ON──► Component A
-Component X ──DEPENDS_ON──► Component B
-Component B ──DEPENDS_ON──► Component C
-Component B ──DEPENDS_ON──► Component D
+Component X ──DEPENDS_ON──► Component A  (quantity: 1)
+Component X ──DEPENDS_ON──► Component B  (quantity: 2)
+Component X ──DEPENDS_ON──► Component E  (quantity: 1)
+Component B ──DEPENDS_ON──► Component C  (quantity: 4)
+Component B ──DEPENDS_ON──► Component D  (quantity: 1)
+Component A ──DEPENDS_ON──► Component C  (quantity: 2)
+Component E ──DEPENDS_ON──► Component D  (quantity: 1)
 ```
 
-8 個節點，12 條邊。講者提供，不需下載。
+8 個節點，12 條邊。https://github.com/humorless/sciwork/blob/main/supply-chain.cypher
 
 ---
 
@@ -267,32 +271,28 @@ Component B ──DEPENDS_ON──► Component D
 # Step 1（5 min）：連線
 
 ```bash
-# 啟動 Ladybug Explorer
-ladybug explore
+docker run -p 8000:8000 \
+  -v $(pwd):/database \
+  -e LBUG_FILE=workshop.lbug \
+  --rm ghcr.io/ladybugdb/explorer:latest
 ```
 
-開啟瀏覽器，連上 `http://localhost:8888`
+開啟瀏覽器，連上 `http://localhost:8000`
 
-確認 Schema panel 可以看到節點類型
+確認 Explorer 介面正常載入
 
 ---
 
 # Step 2（10 min）：載入資料
 
-講者提供 `supply-chain.cypher`，在 Query panel 執行：
-
-```cypher
--- 建立零件節點
-CREATE (cpu:Component {name: 'CPU', critical: true})
-CREATE (mem:Component {name: 'Memory', critical: true})
-...
-
--- 建立供應關係
-CREATE (tsmc)-[:SUPPLIES {lead_time: 30}]->(cpu)
-...
+```bash
+lbug workshop.lbug < supply-chain.cypher
 ```
 
-確認 Schema panel 出現 `Component`、`Supplier` 兩種節點
+載入完成後，開啟 Ladybug Explorer，切換到 **Schema panel** 確認：
+
+- 出現 `Component`、`Supplier` 兩種節點 ✓
+- 出現 `SUPPLIES`、`DEPENDS_ON` 兩種關係 ✓
 
 ---
 
