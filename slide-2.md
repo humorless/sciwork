@@ -32,227 +32,151 @@ style: |
 
 ---
 
-# 複習：Graph 的三個元素
-
-```
-(User) -[WATCHED {rating: 5}]-> (Movie)
-  ↑         ↑                      ↑
- 節點     關係（有屬性）          節點
-```
-
-**上堂課的成果**：
-- ✅ 安裝了 Ladybug
-- ✅ 載入了 MovieLens 數據
-- ✅ 看到了第一個查詢結果
-
-**今天的問題**：怎樣寫更複雜的查詢？
-
----
-
-# Cypher：Graph 的查詢語言
-
-**Cypher = 視覺即代碼**
-
-你看到什麼，就寫什麼
+# 複習：Unit 1 的成果
 
 ```cypher
-# 人看圖
-(User A) -[WATCHED]-> (Movie)
-
-# 人寫代碼（Cypher）
-(u:User {id: 'A'}) -[r:WATCHED]-> (m:Movie)
-
-# 完整查詢
-MATCH (u:User {id: 'A'}) -[r:WATCHED]-> (m:Movie)
-RETURN m.title, r.rating
+MATCH (a:Component)-[:DEPENDS_ON]->(b:Component)
+RETURN a.name, b.name
 ```
+
+這是一跳查詢。
+
+**今天的問題**：如果要找三跳、四跳，怎麼寫？
 
 ---
 
-# SQL vs Cypher：思維方式
+# Cypher 的核心思想
 
 **SQL 思維**：「我要哪些欄位？」
+
 ```sql
-SELECT u2.id, COUNT(*) as cnt
-FROM rating r1 JOIN rating r2 ON ...
-WHERE r1.user_id = 'A'
+SELECT c2.name FROM component c1
+JOIN depends_on d ON c1.id = d.from_id
+JOIN component c2 ON d.to_id = c2.id
+WHERE c1.name = 'CPU_MOD'
 ```
-→ 邏輯隱藏在 JOIN 和 WHERE 裡
 
 **Cypher 思維**：「我要走哪條路？」
+
 ```cypher
-MATCH (u:User {id: 'A'}) 
-      -[r1:RATED]-> (m:Movie)
-      <- [r2:RATED] - (u2:User)
-RETURN u2.id
+MATCH (a:Component {name: 'CPU_MOD'})-[:DEPENDS_ON]->(b)
+RETURN b.name
 ```
-→ 邏輯就是路徑本身
+
+路徑寫出來，邏輯就在裡面。
 
 ---
 
-# Cypher 基本語法 #1：節點表示
+# Cypher 語法：節點
 
-**模式**
 ```cypher
 (variable:Label {property: value})
 ```
 
-**範例**
 ```cypher
-(u:User)              # User 類型的節點，別名 u
-(m:Movie)             # Movie 類型的節點，別名 m
-(u:User {id: 'A'})   # id 為 'A' 的 User
-(m:Movie {year: 2010}) # 2010 年的電影
-```
-
-**簡化寫法**
-```cypher
-(u)                   # 任何節點，別名 u（不指定類型）
-(m:Movie)             # 任何 Movie，但不起別名也行
+(c:Component)                     -- Component 節點，別名 c
+(c:Component {name: 'CPU'})       -- 指定屬性過濾
+(c:Component {critical: true})    -- 只找 critical 的零件
+(c)                               -- 任何節點（不限類型）
 ```
 
 ---
 
-# Cypher 基本語法 #2：關係表示
+# Cypher 語法：關係
 
-**模式**
 ```cypher
-(n1) -[variable:TYPE {property: value}]-> (n2)
-  ↑                                           ↑
- 起點                                        終點
+(a)-[r:TYPE {property: value}]->(b)   -- 有向
+(a)-[r:TYPE]-(b)                      -- 無向
+(a)-[:TYPE]->(b)                      -- 省略別名
+(a)-->(b)                             -- 省略類型
 ```
 
-**方向性**
-```cypher
-(u) -[r:WATCHED]-> (m)    # u 看過 m（單向）
-(u) <- [r:WATCHED] - (m)  # m 被 u 看過（反向）
-(u) - [r:WATCHED] - (m)   # u 和 m 有 WATCHED 關係（雙向）
-```
+**Variable-length path**：
 
-**無屬性簡化**
 ```cypher
-(u) -[:WATCHED]-> (m)     # 省略關係別名
-(u) --> (m)               # 省略關係類型
+(a)-[:DEPENDS_ON*1..3]->(b)   -- 1 到 3 跳
+(a)-[:DEPENDS_ON*]->(b)       -- 任意跳數
+(a)-[:DEPENDS_ON*3]->(b)      -- 恰好 3 跳
 ```
 
 ---
 
-# Cypher 完整示例：一跳查詢
+# 一跳 vs 多跳
 
-**問題**：User A 看過哪些電影？
-
+**一跳**：直接依賴
 ```cypher
-MATCH (u:User {id: 'A'}) -[r:WATCHED]-> (m:Movie)
-RETURN m.title, r.rating
-ORDER BY r.rating DESC
+MATCH (a:Component {name: 'CPU_MOD'})-[:DEPENDS_ON]->(b)
+RETURN b.name
 ```
 
-**執行步驟**：
-1. 找到 id 為 'A' 的 User 節點
-2. 沿著 WATCHED 邊走到 Movie 節點
-3. 返回電影名稱和評分
-4. 按評分降序排列
-
----
-
-# Pattern #2：多跳查詢
-
-**問題**：User A 的朋友看過哪些電影？
-
+**多跳**：所有上游依賴（不限層數）
 ```cypher
-MATCH (u:User {id: 'A'}) 
-      -[:WATCHED]-> (m:Movie)
-      <- [:WATCHED] - (u2:User)
-RETURN DISTINCT u2.id, u2.name
-LIMIT 5
+MATCH (a:Component {name: 'CPU_MOD'})-[:DEPENDS_ON*]->(b)
+RETURN DISTINCT b.name
 ```
 
-**執行步驟**：
-1. 找 User A
-2. 找 A 看過的所有電影
-3. 反向走，找看過同樣電影的其他用戶
-4. 返回這些用戶
-
-**直觀理由**：看過同樣電影的人 = 朋友（品味相似）
+同一個語法，`*` 讓 DB 自己走到底。
 
 ---
 
-# Pattern #3：加上篩選條件
+# 加上過濾條件
 
-**問題**：User A 給 4 星以上評分的電影，還有誰也看過？
+只看 critical 的依賴路徑：
 
 ```cypher
-MATCH (u:User {id: 'A'}) 
-      -[r1:WATCHED {rating: 4}]-> (m:Movie)
-      <- [r2:WATCHED] - (u2:User)
-WHERE r1.rating >= 4 AND r2.rating >= 4
-RETURN m.title, u2.id, u2.name
-ORDER BY m.title
+MATCH (a:Component {name: 'CPU_MOD'})
+      -[:DEPENDS_ON*]->(b:Component)
+WHERE b.critical = true
+RETURN DISTINCT b.name
 ```
 
-**新概念**：
-- `WHERE` 子句：額外的篩選邏輯
-- `ORDER BY`：排序結果
-- `DISTINCT`：去重
-
----
-
-# 為什麼 Cypher 更直觀？
-
-**視覺對應**
-
-| 圖示 | 代碼 | 直觀性 |
-|------|------|--------|
-| `(A) -[WATCHED]-> (B)` | `MATCH (a) -[:WATCHED]-> (b)` | ⭐⭐⭐⭐⭐ |
-| 多層 JOIN | `... JOIN ... ON ... JOIN ...` | ⭐ |
-
-**好處**
-- 查詢即路徑，路徑即查詢
-- 多跳查詢不需要額外 JOIN
-- 結構關係一目瞭然
-
----
-
-# Cypher MATCH 完整結構
+找供應商：哪些供應商供應了 CPU_MOD 的上游零件？
 
 ```cypher
-MATCH (pattern)
-WHERE (conditions)
+MATCH (a:Component {name: 'CPU_MOD'})
+      -[:DEPENDS_ON*]->(b:Component)
+      <-[:SUPPLIES]-(s:Supplier)
+RETURN DISTINCT s.name, b.name
+ORDER BY s.name
+```
+
+---
+
+# 同一個語法，換個 Dataset
+
+從 Supply chain 換到 **Amazon product co-purchase graph**
+
+**問題類型一樣，語意不同**
+
+```cypher
+-- Supply chain：找上游零件
+MATCH (x:Component)-[:DEPENDS_ON*]->(b:Component)
+
+-- Amazon：找共同購買鏈
+MATCH (x:Product)-[:CO_PURCHASED*1..2]->(b:Product)
+```
+
+學 Cypher 一次，兩個 domain 都會用。
+
+---
+
+# MATCH 完整結構
+
+```cypher
+MATCH  (pattern)
+WHERE  (conditions)
 RETURN (projections)
 ORDER BY (expressions)
-LIMIT (number)
+LIMIT  (number)
 ```
 
-**各部分的作用**
-- `MATCH`：找符合模式的子圖
-- `WHERE`：進一步篩選結果
-- `RETURN`：選擇要返回的列
-- `ORDER BY`：排序
-- `LIMIT`：限制返回數量
+**常見的 RETURN 技巧**：
 
----
-
-# 實作先睹為快
-
-今天實作的流程：
-
-1. **簡單查詢**：找出 User A 的直接鄰居
-2. **多跳查詢**：找出鄰居的鄰居
-3. **加條件**：只看評分 4 星以上的
-
-每一步你都會自己改代碼，不是只 copy paste。
-
----
-
-# 小結
-
-**Cypher 的核心思想**
-
-- 🔍 **視覺即代碼**：查詢就像畫路線
-- 🎯 **多跳不需 JOIN**：直接沿邊走
-- 📊 **結構清晰**：邏輯關係一目瞭然
-
-**下一步**：在實作中體驗多跳查詢的威力
+```cypher
+RETURN DISTINCT b.name          -- 去重
+RETURN b.name, COUNT(*) AS cnt  -- 聚合
+RETURN b                        -- 整個節點
+```
 
 ---
 
@@ -262,73 +186,90 @@ LIMIT (number)
 
 ---
 
-# 實作目標（40 mins）
+# 實作目標（40 min）
 
-**逐步加深 query 能力：**
+**逐步加深查詢能力：**
 
-1. ✅ 一跳查詢：找直接鄰居
-2. ✅ 多跳查詢：找鄰居的鄰居
-3. ✅ 加條件查詢：篩選評分
+1. ✅ 一跳 → 多跳，加上 `*`
+2. ✅ 加過濾條件，找 critical 路徑
+3. ✅ 換 dataset，用 Amazon co-purchase 跑同樣的語法
 
 **成功指標**：
-- 能自己修改 WHERE 條件 ✓
-- 理解多跳查詢的邏輯 ✓
+- 能自己修改 path pattern ✓
+- 理解 `*1..3` 的意思 ✓
 - 不是只能 copy paste ✓
 
 ---
 
-# 實作流程
+# Step 1（10 min）：多跳查詢
 
-**Step 1（10 min）**：一跳 - 直接鄰居
+Supply chain dataset，繼續用：
+
 ```cypher
-# User A 看過的電影
-MATCH (u:User {id: 'A'}) -[r:WATCHED]-> (m:Movie)
-RETURN m.title, r.rating
-
-# 改成：找看過同樣電影的其他用戶
-MATCH (u:User {id: 'A'}) 
-      -[:WATCHED]-> (m:Movie)
-      <- [:WATCHED] - (u2:User)
-WHERE u2.id != 'A'
-RETURN DISTINCT u2.id, u2.name
+-- 找出 CPU_MOD 的所有上游依賴（不限層數）
+MATCH (a:Component {name: 'CPU_MOD'})
+      -[:DEPENDS_ON*]->(b:Component)
+RETURN DISTINCT b.name
 ```
 
-**Step 2（15 min）**：多跳 - 鄰居的鄰居
+**試試看**：
+- 把 `*` 改成 `*1..2`，結果有什麼不同？
+- 換另一個起點零件
+
+---
+
+# Step 2（15 min）：加條件過濾
+
 ```cypher
-# 找鄰居看過但 A 沒看過的電影
-MATCH (u:User {id: 'A'})
-      -[:WATCHED]-> (m1:Movie)
-      <- [:WATCHED] - (u2:User)
-      -[:WATCHED]-> (m2:Movie)
-WHERE NOT (u) -[:WATCHED]-> (m2)
-RETURN m2.title, COUNT(*) as recommendations
+-- 只看 critical 的依賴路徑
+MATCH (a:Component {name: 'CPU_MOD'})
+      -[:DEPENDS_ON*]->(b:Component)
+WHERE b.critical = true
+RETURN DISTINCT b.name
 ```
 
-**Step 3（10 min）**：加條件 - 評分篩選
 ```cypher
-# 只看評分 4 星以上的推薦
-MATCH (u:User {id: 'A'})
-      -[r1:WATCHED {rating: 4}]-> (m1:Movie)
-      <- [r2:WATCHED {rating: 4}] - (u2:User)
-      -[r3:WATCHED]-> (m2:Movie)
-WHERE r3.rating >= 4
-RETURN m2.title, COUNT(*) as count
-ORDER BY count DESC
+-- 找上游供應商
+MATCH (a:Component {name: 'CPU_MOD'})
+      -[:DEPENDS_ON*]->(b:Component)
+      <-[:SUPPLIES]-(s:Supplier)
+RETURN DISTINCT s.name, b.name
+ORDER BY s.name
+```
+
+**關鍵直覺**：多加一段 pattern，就是多走一跳。不需要 JOIN。
+
+---
+
+# Step 3（15 min）：換 Amazon Dataset
+
+載入 Amazon co-purchase graph（講者提供），跑同樣結構的 query：
+
+```cypher
+-- 買了這個產品的人，還買了什麼？（一跳）
+MATCH (p:Product {id: 'B000F83...'})-[:CO_PURCHASED]->(q:Product)
+RETURN q.title, q.category
 LIMIT 10
 ```
 
-**Step 4（5 min）**：自己嘗試
-- 改成找其他用戶（例如 User B）
-- 改成更高的評分門檻
-- 加上時間條件（optional）
+```cypher
+-- 兩跳：買了 → 還買了 → 還買了什麼
+MATCH (p:Product {id: 'B000F83...'})-[:CO_PURCHASED*1..2]->(q:Product)
+RETURN DISTINCT q.title
+LIMIT 20
+```
+
+**注意**：語法完全一樣，只是節點類型和關係名稱不同。
 
 ---
 
 # 檢查點
 
-**你現在能做到**：
-- ✅ 讀懂一個 Cypher query
-- ✅ 改數字和條件
-- ✅ 理解多跳的含義
+你現在能做到：
 
-下堂課，我們讓 DB 自己算推薦，而不是手寫 query！
+- ✅ 讀懂一個 Cypher path pattern
+- ✅ 用 `*` 控制跳數
+- ✅ 加 `WHERE` 過濾中間節點的屬性
+- ✅ 把學到的語法套到新的 dataset
+
+下堂課：不手寫查詢，讓 DB 直接跑演算法
