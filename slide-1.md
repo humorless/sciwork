@@ -272,7 +272,11 @@ docker run -p 8000:8000 --rm ghcr.io/ladybugdb/explorer:latest
 
 開啟瀏覽器，連上 `http://localhost:8000`
 
-點選右上角 **Datasets**，載入內建的 tutorial dataset，探索 Explorer 介面
+點選左邊的 **Import**，選 **Try a Sample Dataset**，並且探索 Explorer 介面
+
+---
+
+![Explorer screenshot w:900px](images/explorer.png)
 
 ---
 
@@ -331,15 +335,17 @@ Query 3 的結果應該像這樣：
 ```
 a.name    b.name
 ────────  ────────
-CPU_MOD   CPU
-CPU_MOD   Memory
-Memory    DRAM_Die
-...
+X         A
+X         B
+X         E
+A         C
+B         C
+B         D
+E         D
 ```
 
 **你剛才做了什麼**：
 - 載入了一個 graph
 - 用 Cypher 走了第一跳關係
 
-下堂課：走更多跳，找出所有上游依賴
 
