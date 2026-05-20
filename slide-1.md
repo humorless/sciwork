@@ -86,7 +86,7 @@ style: |
 
 **選 Application layer**：資料量小、一次性分析、原型驗證
 
-**選 RDBMS + CTE**：已有 relational schema、層數不深（1–3 跳）
+**選 RDBMS + CTE**：層數不深（1–3 跳）且不需要複雜的 graph algorithms
 
 **選 Graph DB**：
 - 多跳查詢是常態（3 跳以上）
