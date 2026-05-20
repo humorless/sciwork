@@ -53,17 +53,51 @@ RETURN a.name, b.name
 SELECT c2.name FROM component c1
 JOIN depends_on d ON c1.id = d.from_id
 JOIN component c2 ON d.to_id = c2.id
-WHERE c1.name = 'CPU_MOD'
+WHERE c1.name = 'X'
 ```
 
 **Cypher 思維**：「我要走哪條路？」
 
 ```cypher
-MATCH (a:Component {name: 'CPU_MOD'})-[:DEPENDS_ON]->(b)
+MATCH (a:Component {name: 'X'})-[:DEPENDS_ON]->(b)
 RETURN b.name
 ```
 
 路徑寫出來，邏輯就在裡面。
+
+---
+
+# SQL 使用者的三個認知轉換
+
+| 你熟悉的 SQL | Cypher | 差在哪？ |
+|-------------|--------|---------|
+| `JOIN ... ON foreign_key` | pattern 直接描述關係 | 不需要指定 ON 條件 |
+| `WITH RECURSIVE` | `[:REL*]` | 多跳只要加 `*` |
+| `GROUP BY col` | 不需要寫 | RETURN 有聚合函數就自動 group |
+
+這三個是最容易踩的坑，也是 Cypher 最省力的地方。
+
+---
+
+# 最值得記住的：多跳查詢
+
+**SQL**：
+```sql
+WITH RECURSIVE upstream(id) AS (
+  SELECT to_id FROM depends_on WHERE from_id = 'X'
+  UNION ALL
+  SELECT d.to_id FROM depends_on d JOIN upstream u ON d.from_id = u.id
+)
+SELECT name FROM component WHERE id IN (SELECT id FROM upstream)
+```
+
+**Cypher**：
+```cypher
+MATCH (a:Component {name: 'X'})-[:DEPENDS_ON*]->(b)
+RETURN DISTINCT b.name
+```
+
+同一個問題，Cypher 少寫 80%。
 
 ---
 
@@ -105,13 +139,13 @@ RETURN b.name
 
 **一跳**：直接依賴
 ```cypher
-MATCH (a:Component {name: 'CPU_MOD'})-[:DEPENDS_ON]->(b)
+MATCH (a:Component {name: 'X'})-[:DEPENDS_ON]->(b)
 RETURN b.name
 ```
 
 **多跳**：所有上游依賴（不限層數）
 ```cypher
-MATCH (a:Component {name: 'CPU_MOD'})-[:DEPENDS_ON*]->(b)
+MATCH (a:Component {name: 'X'})-[:DEPENDS_ON*]->(b)
 RETURN DISTINCT b.name
 ```
 
@@ -124,16 +158,16 @@ RETURN DISTINCT b.name
 只看 critical 的依賴路徑：
 
 ```cypher
-MATCH (a:Component {name: 'CPU_MOD'})
+MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
 WHERE b.critical = true
 RETURN DISTINCT b.name
 ```
 
-找供應商：哪些供應商供應了 CPU_MOD 的上游零件？
+找供應商：哪些供應商供應了 X 的上游零件？
 
 ```cypher
-MATCH (a:Component {name: 'CPU_MOD'})
+MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
       <-[:SUPPLIES]-(s:Supplier)
 RETURN DISTINCT s.name, b.name
@@ -186,7 +220,7 @@ RETURN b                        -- 整個節點
 
 ---
 
-# 實作目標（40 min）
+# 實作目標（30 min）
 
 **逐步加深查詢能力：**
 
@@ -206,8 +240,8 @@ RETURN b                        -- 整個節點
 Supply chain dataset，繼續用：
 
 ```cypher
--- 找出 CPU_MOD 的所有上游依賴（不限層數）
-MATCH (a:Component {name: 'CPU_MOD'})
+-- 找出 X 的所有上游依賴（不限層數）
+MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
 RETURN DISTINCT b.name
 ```
@@ -218,11 +252,11 @@ RETURN DISTINCT b.name
 
 ---
 
-# Step 2（15 min）：加條件過濾
+# Step 2（10 min）：加條件過濾
 
 ```cypher
 -- 只看 critical 的依賴路徑
-MATCH (a:Component {name: 'CPU_MOD'})
+MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
 WHERE b.critical = true
 RETURN DISTINCT b.name
@@ -230,7 +264,7 @@ RETURN DISTINCT b.name
 
 ```cypher
 -- 找上游供應商
-MATCH (a:Component {name: 'CPU_MOD'})
+MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
       <-[:SUPPLIES]-(s:Supplier)
 RETURN DISTINCT s.name, b.name
@@ -241,7 +275,7 @@ ORDER BY s.name
 
 ---
 
-# Step 3（15 min）：換 Amazon Dataset
+# Step 3（10 min）：換 Amazon Dataset
 
 載入 Amazon co-purchase graph（講者提供），跑同樣結構的 query：
 
