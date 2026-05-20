@@ -70,13 +70,13 @@ style: |
 
 # Q2：有哪些選擇？
 
-**三條路，各有代價**
+**三種做 graph traversal 的方法，各有 trade-off**
 
-| 方式 | 做法 | 代價 |
+| 架構 | 實作 | 代價 |
 |------|------|------|
-| Application layer | Python + NetworkX | 需要搬移大量資料 |
-| RDBMS + recursive CTE | SQL WITH RECURSIVE | SQL Query 難以閱讀 |
-| Graph DB | Cypher 原生查詢 | 複雜的圖演算法，需要 UDF |
+| Application Layer | Python + NetworkX | 需要搬移大量資料 |
+| RDBMS + recursive CTE | SQL WITH RECURSIVE | SQL RECURSIVE Query 難寫難讀 |
+| Graph DB | Cypher Query | Cypher 相對冷門。 |
 
 **沒有絕對的對錯，但有適合的情境**
 
@@ -257,46 +257,50 @@ Component E ──DEPENDS_ON──► Component D  (quantity: 1)
 
 **你會完成：**
 
-1. ✅ 連上 Ladybug Explorer
-2. ✅ 載入 Supply Chain dataset
-3. ✅ 跑出第一個 query
-
-**成功指標**：
-- 連線成功 ✓
-- 看到節點和關係 ✓
-- Query 跑出結果 ✓
+1. ✅ 熟悉 Ladybug Explorer 介面
+2. ✅ 用 CLI 建立資料庫並載入 Supply Chain dataset
+3. ✅ 用 Explorer 連上自己的資料庫
+4. ✅ 跑出第一個 query
 
 ---
 
-# Step 1（5 min）：連線
+# Step 1（5 min）：認識 Ladybug Explorer
 
 ```bash
-docker run -p 8000:8000 \
-  -v $(pwd):/database \
-  -e LBUG_FILE=workshop.lbug \
-  --rm ghcr.io/ladybugdb/explorer:latest
+docker run -p 8000:8000 --rm ghcr.io/ladybugdb/explorer:latest
 ```
 
 開啟瀏覽器，連上 `http://localhost:8000`
 
-確認 Explorer 介面正常載入
+點選右上角 **Datasets**，載入內建的 tutorial dataset，探索 Explorer 介面
 
 ---
 
-# Step 2（10 min）：載入資料
+# Step 2（5 min）：建立資料庫並載入資料
 
 ```bash
-lbug workshop.lbug < supply-chain.cypher
+lbug unit-1.lbug < supply-chain.cypher
 ```
 
-載入完成後，開啟 Ladybug Explorer，切換到 **Schema panel** 確認：
+---
+
+# Step 3（5 min）：用 Explorer 連上自己的資料庫
+
+```bash
+docker run -p 8000:8000 \
+  -v $(pwd):/database \
+  -e LBUG_FILE=unit-1.lbug \
+  --rm ghcr.io/ladybugdb/explorer:latest
+```
+
+切換到 **Schema panel** 確認：
 
 - 出現 `Component`、`Supplier` 兩種節點 ✓
 - 出現 `SUPPLIES`、`DEPENDS_ON` 兩種關係 ✓
 
 ---
 
-# Step 3（15 min）：跑第一個 Query
+# Step 4（15 min）：跑第一個 Query
 
 ```cypher
 -- Query 1：列出所有零件
@@ -316,7 +320,7 @@ MATCH (a:Component)-[:DEPENDS_ON]->(b:Component)
 RETURN a.name, b.name
 ```
 
-✅ 看到結果 → 成功！❌ 出錯 → 舉手
+✅ 看到結果 → 成功！　❌ 出錯 → 舉手
 
 ---
 
