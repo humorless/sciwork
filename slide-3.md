@@ -26,57 +26,32 @@ style: |
 
 <!-- _class: lead -->
 
-# In-database 計算：Algorithm Tour
+# In-database Analytics：Algorithm Tour
 
 **Unit 3** | Graph Analysis Workshop
 
 ---
 
-# 傳統做法的問題
+# 對比：傳統 vs. In-database
 
+**❌ 傳統做法**
 ```
-DB ──► 拉資料到 Application ──► Python / NetworkX 計算 ──► 寫回 DB
-         (幾百萬筆)                  (慢、記憶體吃緊)
+DB ──► 拉資料到 App ──► Python 計算 ──► 寫回 DB
+       (幾百萬筆)      (慢、記憶體吃緊)
 ```
+痛點：網路 I/O、格式轉換、記憶體壓力
 
-**痛點**：
-- 網路 I/O 是瓶頸
-- 資料在記憶體裡要轉換格式
-- 資料量一大，流程就崩
-
----
-
-# In-database 計算
-
+**✅ In-database Analytics**
 ```
 DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
 ```
-
-**核心邏輯：資料不動，演算法進去**
-
-好處：
-- 減少網路傳輸
-- 利用 DB 的原生加速（columnar + vectorized）
-- 計算結果遠小於原始資料
-
----
-
-# Ladybug 的六個 Graph Algorithms
-
-| Algorithm | 解決的問題 |
-|-----------|-----------|
-| Shortest Paths | A 到 B 最短走幾步？ |
-| PageRank | 誰是網絡裡最重要的節點？ |
-| Louvain | 圖裡自然地形成了哪些群組？ |
-| Weakly Connected Components | 整個圖有幾個獨立的連通塊？ |
-| Strongly Connected Components | 哪些節點互相可以到達對方？ |
-| K-Core Decomposition | 最密集連接的核心子圖是哪些？ |
+優勢：資料不動、原生加速、結果遠小於原始資料
 
 ---
 
 # 今天的實作方式
 
-**Dataset**：Amazon product co-purchase graph
+**Dataset**：Amazon follow graph（來自 SNAP）
 
 每個 algorithm 花 **5–7 分鐘**：
 1. 看一句話說明：這個 algorithm 在解什麼問題
@@ -87,106 +62,99 @@ DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
 
 ---
 
-# Algorithm 1：Shortest Paths
+# Ladybug 的五個 Graph Algorithms
 
-**問的問題**：商品 A 到商品 B，最短的共同購買路徑是什麼？
+| Algorithm | 解決的問題 |
+|-----------|-----------|
+| PageRank | 誰是網絡裡最重要的節點？ |
+| Louvain | 圖裡自然地形成了哪些群組？ |
+| Weakly Connected Components | 整個圖有幾個獨立的連通塊？ |
+| Strongly Connected Components | 哪些節點互相可以到達對方？ |
+| K-Core Decomposition | 最密集連接的核心子圖是哪些？ |
 
-```cypher
-CALL algo.shortestPath(
-  {startNode: 'B0001', endNode: 'B0099'}
-) YIELD path, cost
-RETURN [n IN nodes(path) | n.title] AS path, cost
-```
-
-**結果解讀**：路徑上的商品 = 購買鏈中的中間站
-
-**類比**：Supply chain 版本是「X 到 Y 最少幾個中間零件」
+**注**：多跳路徑搜尋（如 A 到 B 的最短購買鏈）用 Cypher 查詢寫，不是 ALGO extension 演算法。
 
 ---
 
-# Algorithm 2：PageRank
+# Algorithm 1：PageRank
 
-**問的問題**：哪些商品是整個網絡的樞紐？（被最多人帶動購買）
+**問的問題**：誰是網絡裡最重要的節點？
 
 ```cypher
-CALL algo.pageRank()
-YIELD nodeId, score
-MATCH (p:Product) WHERE id(p) = nodeId
-RETURN p.title, score
-ORDER BY score DESC
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL page_rank('Graph')
+RETURN node.ID, rank
+ORDER BY rank DESC
 LIMIT 10
 ```
 
-**結果解讀**：score 越高 = 越多其他商品「指向」它（co-purchase）
+**結果解讀**：rank 越高 = 被越多人 follow
 
 **類比**：Supply chain 版本是「哪個零件最多人依賴」
 
 ---
 
-# Algorithm 3：Louvain（Community Detection）
+# Algorithm 2：Louvain（Community Detection）
 
-**問的問題**：這個 co-purchase 網絡裡，自然地形成了哪些「品味群」？
+**問的問題**：網絡裡自然地形成了哪些群組？
 
 ```cypher
-CALL algo.louvain()
-YIELD nodeId, community
-MATCH (p:Product) WHERE id(p) = nodeId
-RETURN community, COLLECT(p.title)[..5] AS sample_products, COUNT(*) AS size
-ORDER BY size DESC
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL louvain('Graph')
+RETURN louvain_id, COUNT(*) AS community_size
+ORDER BY community_size DESC
 LIMIT 10
 ```
 
-**結果解讀**：同一個 community 的商品，傾向被同一批人購買
+**結果解讀**：louvain_id 相同 = 屬於同一個社群，社群內部連接更密集
 
 ---
 
-# Algorithm 4：Weakly Connected Components
+# Algorithm 3：Weakly Connected Components
 
-**問的問題**：整個圖裡有幾個獨立的購買圈？（彼此完全沒有交集）
+**問的問題**：整個圖裡有幾個獨立的連通塊？
 
 ```cypher
-CALL algo.wcc()
-YIELD nodeId, componentId
-RETURN componentId, COUNT(*) AS size
-ORDER BY size DESC
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL weakly_connected_components('Graph')
+RETURN group_id, COUNT(*) AS component_size
+ORDER BY component_size DESC
 LIMIT 10
 ```
 
-**結果解讀**：最大的 component 通常佔絕大多數；小的 component 是孤立產品群
+**結果解讀**：group_id 相同 = 屬於同一個連通分量；最大的通常佔絕大多數
 
 ---
 
-# Algorithm 5：Strongly Connected Components
+# Algorithm 4：Strongly Connected Components
 
-**問的問題**：哪些商品互相帶動購買（A→B 且 B→A）？
-
-```cypher
-CALL algo.scc()
-YIELD nodeId, componentId
-MATCH (p:Product) WHERE id(p) = nodeId
-RETURN componentId, COLLECT(p.title)[..5] AS products, COUNT(*) AS size
-ORDER BY size DESC
-LIMIT 5
-```
-
-**結果解讀**：SCC 內的商品形成「買了就會互相推薦的循環」
-
----
-
-# Algorithm 6：K-Core Decomposition
-
-**問的問題**：最核心的高度互連商品群是哪些？
+**問的問題**：哪些節點互相可以到達對方？
 
 ```cypher
-CALL algo.kCore()
-YIELD nodeId, coreValue
-MATCH (p:Product) WHERE id(p) = nodeId
-RETURN p.title, coreValue
-ORDER BY coreValue DESC
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL strongly_connected_components('Graph')
+RETURN group_id, COUNT(*) AS scc_size
+ORDER BY scc_size DESC
 LIMIT 10
 ```
 
-**結果解讀**：coreValue 越高 = 與越多其他商品互相連接
+**結果解讀**：group_id 相同 = 屬於同一個強連通分量，內部有循環路徑
+
+---
+
+# Algorithm 5：K-Core Decomposition
+
+**問的問題**：最密集連接的核心子圖是哪些？
+
+```cypher
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL k_core_decomposition('Graph')
+RETURN k_degree, COUNT(*) AS num_nodes
+ORDER BY k_degree DESC
+LIMIT 10
+```
+
+**結果解讀**：k_degree 越高 = 節點與越多其他節點互相連接
 
 ---
 
@@ -194,36 +162,55 @@ LIMIT 10
 
 **Ladybug in-database**：
 ```cypher
-CALL algo.pageRank() YIELD nodeId, score ...
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL page_rank('Graph') RETURN node.ID, rank;
 ```
-→ 一行呼叫，DB 直接算
+→ 兩行呼叫，資料不動
 
 **Python + NetworkX**：
 ```python
 import networkx as nx
-G = fetch_all_edges_from_db()   # 拉資料（可能幾百萬筆）
-G_nx = nx.DiGraph(G)            # 建圖（記憶體）
-scores = nx.pagerank(G_nx)      # 計算
-save_back_to_db(scores)         # 寫回
+edges = fetch_all_follows()      # 拉資料（幾百萬筆）
+G = nx.DiGraph(edges)            # 建圖（記憶體吃緊）
+scores = nx.pagerank(G)          # 計算
+save_results_to_db(scores)       # 寫回
 ```
-→ 四步，資料搬兩次，記憶體壓力大
+→ 四步，資料搬兩次，記憶體壓力大，耗時 5-10 分鐘
+
+---
+
+# 選型決策：從問題出發
+
+**你想回答什麼問題？** → **選用哪個 Algorithm**
+
+| 你的問題 | 選用方法 | 典型應用 |
+|---------|--------|--------|
+| A 到 B 的最短路徑？ | **Cypher 多跳查詢** | 推薦路徑、依賴關係 |
+| 誰是最重要的節點？ | **PageRank** | 重要性排名、影響力 |
+| 圖自然形成哪些群組？ | **Louvain** | 社群偵測、市場分群 |
+| 圖有幾個獨立部分？ | **WCC** | 連通性分析、孤立檢測 |
+| 哪些節點互相可達？ | **SCC** | 反饋迴路、強關聯性 |
+| 最核心的高連結節點？ | **K-Core** | 樞紐節點、核心圈層 |
+
+**思考方式**：先定義問題 → 看表格找算法 → 跑一行 query
 
 ---
 
 # 小結
 
-**六個 algorithm，六種問法**
+**五個 ALGO algorithms，五種問法**
 
 | 問題類型 | Algorithm |
 |---------|-----------|
-| 最短路徑 | Shortest Paths |
 | 重要性排名 | PageRank |
 | 自然群組 | Louvain |
 | 連通性（弱） | WCC |
 | 連通性（強） | SCC |
 | 核心密度 | K-Core |
 
-**in-database = 一行呼叫，資料不動**
+**in-database = 兩行呼叫（project_graph + 演算法），資料不動**
+
+（多跳路徑搜尋用 Cypher 寫，不是 ALGO extension）
 
 ---
 
@@ -235,34 +222,58 @@ save_back_to_db(scores)         # 寫回
 
 # 實作目標（40 min）
 
-**把六個 algorithm 都跑一遍：**
+**把五個 ALGO algorithm 都跑一遍：**
 
-1. ✅ Shortest Paths → 找路徑
-2. ✅ PageRank → 找重要商品
-3. ✅ Louvain → 找品味群
-4. ✅ WCC / SCC → 找連通塊
-5. ✅ K-Core → 找核心商品
+1. ✅ PageRank → 找重要節點
+2. ✅ Louvain → 找社群
+3. ✅ WCC → 找弱連通分量
+4. ✅ SCC → 找強連通分量
+5. ✅ K-Core → 找核心節點
 
 每個 algorithm 看結果、理解輸出、5–7 分鐘
 
 ---
 
-# 實作提示
+# 實作提示 Part 1：載入資料
 
-載入 Amazon co-purchase graph（講者提供）：
+**準備**：schema.cypher、amazon-nodes.csv、amazon-edges.csv
 
+**執行**：
 ```bash
-ladybug load amazon-co-purchase.parquet
+# 建立表結構
+lbug unit-3.lbug < schema.cypher
+
+# 載入資料
+lbug unit-3.lbug << EOF
+COPY account(ID) FROM "amazon-nodes.csv";
+COPY follows FROM "amazon-edges.csv";
+EOF
 ```
 
-確認節點數量：
+**預期**：約 40 萬節點、340 萬邊（耗時 1-2 分鐘）
+
+---
+
+# 實作提示 Part 2：驗證 & 執行
+
+**驗證資料已正確載入**：
 
 ```cypher
-MATCH (p:Product) RETURN COUNT(p)
-MATCH ()-[r:CO_PURCHASED]->() RETURN COUNT(r)
+MATCH (a:account) RETURN COUNT(a) AS account_count
+MATCH ()-[f:follows]->() RETURN COUNT(f) AS follows_count
 ```
 
-接著按順序跑六個 algorithm（投影片上的 query 直接複製）
+預期：約 40 萬個 account，約 340 萬條 follows 關係
+
+**載入 ALGO 擴展**：
+
+```cypher
+LOAD EXTENSION algo;
+```
+
+**按順序跑五個 algorithm**
+
+每個算法的 query 在投影片上，直接複製貼上執行
 
 遇到問題 → 舉手
 
@@ -270,9 +281,18 @@ MATCH ()-[r:CO_PURCHASED]->() RETURN COUNT(r)
 
 # 你現在能做到
 
-- ✅ 知道 Ladybug 有哪六個內建 algorithm
+- ✅ 知道 Ladybug 有哪五個內建 ALGO algorithms
 - ✅ 理解每個 algorithm 在解什麼問題
-- ✅ 親手跑過一次，看到結果
-- ✅ 知道什麼情況應該選哪個
+- ✅ 親手跑過一次，看到結果（40 萬節點的圖，秒級出結果）
+- ✅ **知道選型依據**：什麼問題選什麼算法
+- ✅ **明白 in-database 的價值**：資料不動，演算法進去 → 快速、省記憶體
+
+**對比：如果用 Python + NetworkX**
+- 拉 340 萬筆邊到應用層：網路 I/O + 轉換
+- 建圖到記憶體：GC 壓力大
+- 執行演算法：幾分鐘
+→ 總耗時：可能 5-10 分鐘
+
+**用 Ladybug in-database**：2-3 秒
 
 下堂課：結果出來了，怎麼讓人看得懂它的推理過程？
