@@ -191,7 +191,7 @@ curl -fsSL https://install.ladybugdb.com | sh
 
 # Basic Cypher Syntax
 
-**四個最常用的 clause：**
+**查詢資料 — MATCH 的四個最常用 clause：**
 
 ```cypher
 MATCH  (n:Label {property: value})-[:TYPE]->(m)   // 找符合的 pattern
@@ -200,37 +200,25 @@ RETURN n.name, m.name                              // 選擇輸出
 LIMIT  10                                          // 限制筆數
 ```
 
-**建立資料：**
-
-```cypher
-CREATE (c:Component {name: 'CPU', critical: true})
-CREATE (s:Supplier  {name: 'TSMC'})
-CREATE (s)-[:SUPPLIES {lead_time: 30}]->(c)
-```
-
-**語法直覺**：MATCH 的 pattern 就是你要找的圖的形狀。
+**語法直覺**：MATCH 的 pattern 就是你要找的圖的形狀。今天的實作只需要 MATCH + RETURN，資料已由講者預先載入。
 
 ---
 
 # 今天的 Dataset：Supply Chain BOM
 
-```
-Supplier S1 ──SUPPLIES──► Component A  (lead_time: 14)
-Supplier S1 ──SUPPLIES──► Component D  (lead_time: 30)
-Supplier S2 ──SUPPLIES──► Component B  (lead_time: 21)
-Supplier S2 ──SUPPLIES──► Component C  (lead_time:  7)
-Supplier S2 ──SUPPLIES──► Component E  (lead_time: 14)
+**8 個節點、12 條邊**
 
-Component X ──DEPENDS_ON──► Component A  (quantity: 1)
-Component X ──DEPENDS_ON──► Component B  (quantity: 2)
-Component X ──DEPENDS_ON──► Component E  (quantity: 1)
-Component B ──DEPENDS_ON──► Component C  (quantity: 4)
-Component B ──DEPENDS_ON──► Component D  (quantity: 1)
-Component A ──DEPENDS_ON──► Component C  (quantity: 2)
-Component E ──DEPENDS_ON──► Component D  (quantity: 1)
+- **Supplier**：S1 (TW)、S2 (JP)
+- **Component**：X, A, B, C, D, E（其中 X, A, B, E 標記為 critical）
+- **邊**：5 條 SUPPLIES（供應）、7 條 DEPENDS_ON（依賴）
+
+詳細定義請見：
+
+```bash
+vim supply-chain.cypher
 ```
 
-8 個節點，12 條邊。https://github.com/humorless/sciwork/blob/main/supply-chain.cypher
+或直接查看：https://github.com/humorless/sciwork/blob/main/supply-chain.cypher
 
 ---
 
@@ -328,24 +316,82 @@ RETURN a.name, b.name
 
 ---
 
-# 檢查點
+# 檢查點：Query 1 ✓
 
-Query 3 的結果應該像這樣：
+```cypher
+MATCH (c:Component)
+RETURN c.name, c.critical
+```
+
+**預期結果**：
+
+```
+c.name    c.critical
+────────  ──────────
+A         True
+B         True
+C         False
+D         False
+E         True
+X         True
+```
+
+（6 個 Component，共 2 種屬性值）
+
+---
+
+# 檢查點：Query 2 ✓
+
+```cypher
+MATCH (s:Supplier)-[:SUPPLIES]->(c:Component)
+RETURN s.name, c.name
+```
+
+**預期結果**：
+
+```
+s.name    c.name
+────────  ────────
+S1        A
+S1        D
+S2        B
+S2        C
+S2        E
+```
+
+（5 個供應關係）
+
+---
+
+# 檢查點：Query 3 ✓
+
+```cypher
+MATCH (a:Component)-[:DEPENDS_ON]->(b:Component)
+RETURN a.name, b.name
+```
+
+**預期結果**：
 
 ```
 a.name    b.name
 ────────  ────────
-X         A
-X         B
-X         E
 A         C
 B         C
 B         D
 E         D
+X         A
+X         B
+X         E
 ```
 
-**你剛才做了什麼**：
-- 載入了一個 graph
-- 用 Cypher 走了第一跳關係
+（7 個依賴關係）
+
+---
+
+# 你剛才做了什麼
+
+- ✅ 載入了一個 graph
+- ✅ 用 Cypher 走了一跳關係
+- ✅ 確認自己看得懂 Node 和 Relationship 的結構
 
 
