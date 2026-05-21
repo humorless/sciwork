@@ -108,10 +108,10 @@ RETURN DISTINCT b.name
 ```
 
 ```cypher
-(c:Component)                     -- Component 節點，別名 c
-(c:Component {name: 'CPU'})       -- 指定屬性過濾
-(c:Component {critical: true})    -- 只找 critical 的零件
-(c)                               -- 任何節點（不限類型）
+(c:Component)                     // Component 節點，別名 c
+(c:Component {name: 'CPU'})       // 指定屬性過濾
+(c:Component {critical: true})    // 只找 critical 的零件
+(c)                               // 任何節點（不限類型）
 ```
 
 ---
@@ -119,18 +119,18 @@ RETURN DISTINCT b.name
 # Cypher 語法：關係
 
 ```cypher
-(a)-[r:TYPE {property: value}]->(b)   -- 有向
-(a)-[r:TYPE]-(b)                      -- 無向
-(a)-[:TYPE]->(b)                      -- 省略別名
-(a)-->(b)                             -- 省略類型
+(a)-[r:TYPE {property: value}]->(b)   // 有向
+(a)-[r:TYPE]-(b)                      // 無向
+(a)-[:TYPE]->(b)                      // 省略別名
+(a)-->(b)                             // 省略類型
 ```
 
 **Variable-length path**：
 
 ```cypher
-(a)-[:DEPENDS_ON*1..3]->(b)   -- 1 到 3 跳
-(a)-[:DEPENDS_ON*]->(b)       -- 任意跳數
-(a)-[:DEPENDS_ON*3]->(b)      -- 恰好 3 跳
+(a)-[:DEPENDS_ON*1..3]->(b)   // 1 到 3 跳
+(a)-[:DEPENDS_ON*]->(b)       // 任意跳數
+(a)-[:DEPENDS_ON*3]->(b)      // 恰好 3 跳
 ```
 
 ---
@@ -183,10 +183,10 @@ ORDER BY s.name
 **問題類型一樣，語意不同**
 
 ```cypher
--- Supply chain：找上游零件
+// Supply chain：找上游零件
 MATCH (x:Component)-[:DEPENDS_ON*]->(b:Component)
 
--- Amazon：找共同購買鏈
+// Amazon：找共同購買鏈
 MATCH (x:Product)-[:CO_PURCHASED*1..2]->(b:Product)
 ```
 
@@ -207,9 +207,9 @@ LIMIT  (number)
 **常見的 RETURN 技巧**：
 
 ```cypher
-RETURN DISTINCT b.name          -- 去重
-RETURN b.name, COUNT(*) AS cnt  -- 聚合
-RETURN b                        -- 整個節點
+RETURN DISTINCT b.name          // 去重
+RETURN b.name, COUNT(*) AS cnt  // 聚合
+RETURN b                        // 整個節點
 ```
 
 ---
@@ -240,7 +240,7 @@ RETURN b                        -- 整個節點
 Supply chain dataset，繼續用：
 
 ```cypher
--- 找出 X 的所有上游依賴（不限層數）
+// 找出 X 的所有上游依賴（不限層數）
 MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
 RETURN DISTINCT b.name
@@ -255,7 +255,7 @@ RETURN DISTINCT b.name
 # Step 2（10 min）：加條件過濾
 
 ```cypher
--- 只看 critical 的依賴路徑
+// 只看 critical 的依賴路徑
 MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
 WHERE b.critical = true
@@ -263,7 +263,7 @@ RETURN DISTINCT b.name
 ```
 
 ```cypher
--- 找上游供應商
+// 找上游供應商
 MATCH (a:Component {name: 'X'})
       -[:DEPENDS_ON*]->(b:Component)
       <-[:SUPPLIES]-(s:Supplier)
@@ -280,14 +280,14 @@ ORDER BY s.name
 載入 Amazon co-purchase graph（講者提供），跑同樣結構的 query：
 
 ```cypher
--- 買了這個產品的人，還買了什麼？（一跳）
+// 買了這個產品的人，還買了什麼？（一跳）
 MATCH (p:Product {id: 'B000F83...'})-[:CO_PURCHASED]->(q:Product)
 RETURN q.title, q.category
 LIMIT 10
 ```
 
 ```cypher
--- 兩跳：買了 → 還買了 → 還買了什麼
+// 兩跳：買了 → 還買了 → 還買了什麼
 MATCH (p:Product {id: 'B000F83...'})-[:CO_PURCHASED*1..2]->(q:Product)
 RETURN DISTINCT q.title
 LIMIT 20

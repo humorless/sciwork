@@ -194,10 +194,10 @@ curl -fsSL https://install.ladybugdb.com | sh
 **四個最常用的 clause：**
 
 ```cypher
-MATCH  (n:Label {property: value})-[:TYPE]->(m)   -- 找符合的 pattern
-WHERE  n.property > 10                             -- 進一步過濾
-RETURN n.name, m.name                              -- 選擇輸出
-LIMIT  10                                          -- 限制筆數
+MATCH  (n:Label {property: value})-[:TYPE]->(m)   // 找符合的 pattern
+WHERE  n.property > 10                             // 進一步過濾
+RETURN n.name, m.name                              // 選擇輸出
+LIMIT  10                                          // 限制筆數
 ```
 
 **建立資料：**
@@ -307,19 +307,19 @@ docker run -p 8000:8000 \
 # Step 4（15 min）：跑第一個 Query
 
 ```cypher
--- Query 1：列出所有零件
+// Query 1：列出所有零件
 MATCH (c:Component)
 RETURN c.name, c.critical
 ```
 
 ```cypher
--- Query 2：誰供應什麼？
+// Query 2：誰供應什麼？
 MATCH (s:Supplier)-[:SUPPLIES]->(c:Component)
 RETURN s.name, c.name
 ```
 
 ```cypher
--- Query 3：第一跳依賴
+// Query 3：第一跳依賴
 MATCH (a:Component)-[:DEPENDS_ON]->(b:Component)
 RETURN a.name, b.name
 ```
