@@ -47,7 +47,7 @@ RETURN a.name, b.name
 
 # Cypher 的核心思想
 
-**SQL 思維**：「我要哪些欄位？」
+**SQL 思維**：「我要 join 哪些欄位？」
 
 ```sql
 SELECT c2.name FROM component c1
@@ -63,7 +63,7 @@ MATCH (a:Component {name: 'X'})-[:DEPENDS_ON]->(b)
 RETURN b.name
 ```
 
-路徑寫出來，邏輯就在裡面。
+路徑反映了邏輯。
 
 ---
 
@@ -178,7 +178,7 @@ ORDER BY s.name
 
 # 同一個語法，換個 Dataset
 
-從 Supply chain 換到 **Amazon product co-purchase graph**
+從 Supply chain 換到 **Social Network dataset**
 
 **問題類型一樣，語意不同**
 
@@ -186,8 +186,8 @@ ORDER BY s.name
 // Supply chain：找上游零件
 MATCH (x:Component)-[:DEPENDS_ON*]->(b:Component)
 
-// Amazon：找共同購買鏈
-MATCH (x:Product)-[:CO_PURCHASED*1..2]->(b:Product)
+// Social network：找追蹤鏈
+MATCH (u:User {username: 'alice'})-[:FOLLOWS*1..2]->(v:User)
 ```
 
 學 Cypher 一次，兩個 domain 都會用。
@@ -226,7 +226,7 @@ RETURN b                        // 整個節點
 
 1. ✅ 一跳 → 多跳，加上 `*`
 2. ✅ 加過濾條件，找 critical 路徑
-3. ✅ 換 dataset，用 Amazon co-purchase 跑同樣的語法
+3. ✅ 換 dataset，用 Social Network 跑同樣的語法
 
 **成功指標**：
 - 能自己修改 path pattern ✓
@@ -275,21 +275,24 @@ ORDER BY s.name
 
 ---
 
-# Step 3（10 min）：換 Amazon Dataset
+# Step 3（10 min）：換 Social Network Dataset
 
-載入 Amazon co-purchase graph（講者提供），跑同樣結構的 query：
+載入 Workshop 提供的 Social Network dataset：
 
-```cypher
-// 買了這個產品的人，還買了什麼？（一跳）
-MATCH (p:Product {id: 'B000F83...'})-[:CO_PURCHASED]->(q:Product)
-RETURN q.title, q.category
-LIMIT 10
+```bash
+lbug unit-2.lbug < social-network.cypher
 ```
 
 ```cypher
-// 兩跳：買了 → 還買了 → 還買了什麼
-MATCH (p:Product {id: 'B000F83...'})-[:CO_PURCHASED*1..2]->(q:Product)
-RETURN DISTINCT q.title
+// 一跳：alice 追蹤了誰？
+MATCH (u:User {username: 'alice'})-[:FOLLOWS]->(v:User)
+RETURN v.username
+```
+
+```cypher
+// 兩跳：追蹤鏈延伸
+MATCH (u:User {username: 'alice'})-[:FOLLOWS*1..2]->(v:User)
+RETURN DISTINCT v.username
 LIMIT 20
 ```
 
@@ -307,3 +310,28 @@ LIMIT 20
 - ✅ 把學到的語法套到新的 dataset
 
 下堂課：不手寫查詢，讓 DB 直接跑演算法
+
+---
+
+# 延伸：Ladybug 官方 Dataset
+
+有興趣的學員可以自行下載來玩：
+
+**① tinysnb（小型社交網路，含 Person / Knows）**
+適合快速試玩 multi-hop 查詢，全部 CSV 加起來 < 20 KB
+
+```bash
+# schema + data 各自下載
+curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/tinysnb/schema.cypher
+curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/tinysnb/vPerson.csv
+curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/tinysnb/eKnows.csv
+```
+
+**② Amazon co-purchase graph（SNAP amazon0601）**
+真實電商資料，約 40 萬節點、340 萬條邊，schema 為 `account / follows`
+
+```bash
+curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/snap/amazon0601/csv/schema.cypher
+curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/snap/amazon0601/csv/amazon-nodes.csv
+curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/snap/amazon0601/csv/amazon-edges.csv  # ~48 MB
+```
