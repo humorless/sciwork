@@ -6,7 +6,8 @@
 
 **Dataset 策略**
 - 基礎練習：手建 Supply chain（BOM）小型 dataset（8 個節點、12 條邊），講者提供，不需下載
-- 主線實作：Amazon product co-purchase graph（SNAP）
+- Unit 1-2 練習：Supply chain dataset + Social network dataset
+- Unit 3-4 主線實作：Amazon follow graph（SNAP amazon0601）——社交網絡，account/follows 關係
 
 ---
 
@@ -44,7 +45,7 @@
 - 繼續用 Supply chain dataset，逐步加深 query：
   1. `MATCH (a)-[:DEPENDS_ON*1..3]->(b) WHERE a.name = 'X' RETURN b` — 找出 X 的所有上游依賴（multi-hop）
   2. 加上過濾：只看 critical = true 的依賴路徑
-  3. 換用 Amazon co-purchase graph：「買了 X 的人也買了什麼？」——同一個語法，不同語意
+  3. 換用 Social network dataset：「A 關注的人也關注誰？」——同一個 Cypher 語法，不同語意，展示 query 的通用性
 - 目標：學員能自己修改 query，不是只能 copy paste
 
 **本單元引入的新概念**：Cypher 語法與多跳查詢
@@ -56,23 +57,24 @@
 **Talk（20 min）**
 - 痛點：傳統做法是把資料拉出來，用 Python / NetworkX 算，再寫回去——資料量一大，這個流程就崩了
 - In-database 的邏輯：資料不動，演算法進去
-- 今天要跑的六個 algorithm，每個用一句話說清楚它在解什麼問題
+- 今天要解的六個圖論問題，每個用一句話說清楚它在解什麼問題
+- 實現方式：Shortest Paths 用 Cypher 查詢，其他五個用 ALGO extension
 
 **實作（40 min）**
 
-在 Amazon co-purchase graph 上依序跑 Ladybug 的內建 algorithms，每個只花 5-7 分鐘，目標是「看到結果、知道它在算什麼」，不是深入原理：
+在 Amazon follow graph（SNAP amazon0601，account/follows 關係）上依序解決六個演算法問題，每個只花 5-7 分鐘，目標是「看到結果、知道它在算什麼」，不是深入原理：
 
-| Algorithm | 問的問題 |
-|---|---|
-| **Shortest paths** | 從商品 A 到商品 B，最短的共同購買路徑是什麼？ |
-| **PageRank** | 哪些商品是整個網絡的樞紐（被最多人帶動購買）？ |
-| **Louvain** | 這個 co-purchase 網絡裡，自然地形成了哪些「品味群」？ |
-| **Weakly Connected Components（WCC）** | 整個圖裡有幾個獨立的購買圈？ |
-| **Strongly Connected Components（SCC）** | 哪些商品互相帶動購買（A 帶動 B，B 也帶動 A）？ |
-| **K-Core Decomposition** | 最核心的高度互連商品群是哪些？ |
+| Algorithm | 問的問題 | 實現方式 |
+|---|---|---|
+| **Shortest Paths** | A 到 B 最短走幾跳？關注鏈最短是什麼？ | Cypher 查詢 |
+| **PageRank** | 誰是網絡裡最重要的節點（被最多人關注）？ | ALGO extension |
+| **Louvain** | 網絡裡自然地形成了哪些社群？ | ALGO extension |
+| **Weakly Connected Components（WCC）** | 整個圖裡有幾個獨立的連通分量？ | ALGO extension |
+| **Strongly Connected Components（SCC）** | 哪些節點互相可以到達對方？ | ALGO extension |
+| **K-Core Decomposition** | 最核心的高度互連節點是哪些？ | ALGO extension |
 
 - 對比：如果用 Python 自己實作 PageRank，需要幾行？Ladybug 是幾行？
-- 目標：親身感受 in-database analytics的簡潔性，以及每個 algorithm 能回答什麼類型的問題
+- 目標：親身感受 in-database analytics 的簡潔性，以及每個 algorithm 能回答什麼類型的問題
 
 **本單元引入的新概念**：in-database graph analytics + Algorithm 選型直覺
 
@@ -82,14 +84,16 @@
 
 **Talk（20 min）**
 - GenAI 推薦 vs Graph 推薦的根本差異：一個是機率，一個是路徑
-- 可解釋性來自結構：「因為買了 A 的人也買了 B，而買了 B 的人也買了 C，所以推薦你 C」——路徑就是推薦理由
+- 可解釋性來自結構：「因為你關注了 A，A 也關注了 B，B 關注的人多，所以推薦你關注 B」——路徑就是推薦理由
 - 收尾：**機器跑得動、人看得懂**——這是 program 的兩個 basic requirement，貫穿全天
 - 延伸：哪些場景 Graph 的可解釋性特別有價值（金融風控、供應鏈風險、推薦系統、知識圖譜）
 
 **實作（40 min）**
-- 用 **G.V()** 視覺化推薦結果的路徑：不只是「推薦你買 X」，而是「為什麼推薦你買 X」
-- Ladybug Explorer 做 schema exploration：讓學員自己摸 schema，不靠講者帶領
-- 學員嘗試修改 query，設計自己覺得合理的推薦邏輯
-- 最後 10 分鐘：開放討論——你的系統裡有沒有哪個問題適合用 Graph 思考？
+- 在 Ladybug Explorer 中執行推薦路徑 query，從表格結果觀察規律：不只是「推薦 ID 45」，而是「為什麼推薦 ID 45」
+  - 看有多少條推薦路徑
+  - 找出影響力最大的中間節點（出現最頻繁的）
+  - 比較不同起點帳戶的推薦模式
+- 學員嘗試修改 query，設計自己覺得合理的推薦邏輯（加上過濾條件，如「至少有 2 條獨立路徑」）
+- 最後 5 分鐘：開放討論——你的系統裡有沒有哪個問題適合用 Graph 思考？
 
 **本單元引入的新概念**：可解釋性與路徑推理

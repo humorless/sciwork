@@ -62,21 +62,40 @@ DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
 
 ---
 
-# Ladybug 的五個 Graph Algorithms
+# 六個 Graph Algorithms
 
-| Algorithm | 解決的問題 |
-|-----------|-----------|
-| PageRank | 誰是網絡裡最重要的節點？ |
-| Louvain | 圖裡自然地形成了哪些群組？ |
-| Weakly Connected Components | 整個圖有幾個獨立的連通塊？ |
-| Strongly Connected Components | 哪些節點互相可以到達對方？ |
-| K-Core Decomposition | 最密集連接的核心子圖是哪些？ |
-
-**注**：多跳路徑搜尋（如 A 到 B 的最短購買鏈）用 Cypher 查詢寫，不是 ALGO extension 演算法。
+| Algorithm | 解決的問題 | 實現方式 |
+|-----------|-----------|---------|
+| Shortest Paths | A 到 B 最短走幾跳？ | **Cypher 查詢** |
+| PageRank | 誰是網絡裡最重要的節點？ | ALGO extension |
+| Louvain | 圖裡自然地形成了哪些群組？ | ALGO extension |
+| Weakly Connected Components | 整個圖有幾個獨立的連通塊？ | ALGO extension |
+| Strongly Connected Components | 哪些節點互相可以到達對方？ | ALGO extension |
+| K-Core Decomposition | 最密集連接的核心子圖是哪些？ | ALGO extension |
 
 ---
 
-# Algorithm 1：PageRank
+# Algorithm 1：Shortest Paths
+
+**問的問題**：節點 A 到節點 B 最短走幾跳？
+
+```cypher
+MATCH path = (a:account {ID: 45})
+            -[:follows*1..3]->(b:account)
+WHERE b.ID = 1036
+RETURN a.ID AS source,
+       b.ID AS target,
+       length(path) AS hops
+LIMIT 5
+```
+
+**結果解讀**：hops = 關注鏈的長度；越短 = 越相近
+
+**類比**：Supply chain 版本是「X 到 Y 最少幾個零件中間商」
+
+---
+
+# Algorithm 2：PageRank
 
 **問的問題**：誰是網絡裡最重要的節點？
 
@@ -94,7 +113,7 @@ LIMIT 10
 
 ---
 
-# Algorithm 2：Louvain（Community Detection）
+# Algorithm 3：Louvain（Community Detection）
 
 **問的問題**：網絡裡自然地形成了哪些群組？
 
@@ -110,7 +129,7 @@ LIMIT 10
 
 ---
 
-# Algorithm 3：Weakly Connected Components
+# Algorithm 4：Weakly Connected Components
 
 **問的問題**：整個圖裡有幾個獨立的連通塊？
 
@@ -126,7 +145,7 @@ LIMIT 10
 
 ---
 
-# Algorithm 4：Strongly Connected Components
+# Algorithm 5：Strongly Connected Components
 
 **問的問題**：哪些節點互相可以到達對方？
 
@@ -142,7 +161,7 @@ LIMIT 10
 
 ---
 
-# Algorithm 5：K-Core Decomposition
+# Algorithm 6：K-Core Decomposition
 
 **問的問題**：最密集連接的核心子圖是哪些？
 
@@ -198,19 +217,20 @@ save_results_to_db(scores)       # 寫回
 
 # 小結
 
-**五個 ALGO algorithms，五種問法**
+**六個 algorithm，六種問法**
 
-| 問題類型 | Algorithm |
-|---------|-----------|
-| 重要性排名 | PageRank |
-| 自然群組 | Louvain |
-| 連通性（弱） | WCC |
-| 連通性（強） | SCC |
-| 核心密度 | K-Core |
+| 問題類型 | Algorithm | 實現 |
+|---------|-----------|------|
+| 最短路徑 | Shortest Paths | Cypher |
+| 重要性排名 | PageRank | ALGO |
+| 自然群組 | Louvain | ALGO |
+| 連通性（弱） | WCC | ALGO |
+| 連通性（強） | SCC | ALGO |
+| 核心密度 | K-Core | ALGO |
 
-**in-database = 兩行呼叫（project_graph + 演算法），資料不動**
-
-（多跳路徑搜尋用 Cypher 寫，不是 ALGO extension）
+**in-database 有兩種實現方式**：
+- Cypher 查詢：靈活，適合自訂邏輯
+- ALGO extension：內建演算法，秒級執行
 
 ---
 
@@ -222,13 +242,14 @@ save_results_to_db(scores)       # 寫回
 
 # 實作目標（40 min）
 
-**把五個 ALGO algorithm 都跑一遍：**
+**把六個 algorithm 都跑一遍：**
 
-1. ✅ PageRank → 找重要節點
-2. ✅ Louvain → 找社群
-3. ✅ WCC → 找弱連通分量
-4. ✅ SCC → 找強連通分量
-5. ✅ K-Core → 找核心節點
+1. ✅ Shortest Paths → 查最短路徑（Cypher）
+2. ✅ PageRank → 找重要節點（ALGO）
+3. ✅ Louvain → 找社群（ALGO）
+4. ✅ WCC → 找弱連通分量（ALGO）
+5. ✅ SCC → 找強連通分量（ALGO）
+6. ✅ K-Core → 找核心節點（ALGO）
 
 每個 algorithm 看結果、理解輸出、5–7 分鐘
 
@@ -281,10 +302,10 @@ LOAD EXTENSION algo;
 
 # 你現在能做到
 
-- ✅ 知道 Ladybug 有哪五個內建 ALGO algorithms
+- ✅ 知道有六個圖論問題的常用解法
 - ✅ 理解每個 algorithm 在解什麼問題
 - ✅ 親手跑過一次，看到結果（40 萬節點的圖，秒級出結果）
-- ✅ **知道選型依據**：什麼問題選什麼算法
+- ✅ **知道選型依據**：什麼問題選什麼算法、什麼場景選 Cypher、什麼場景選 ALGO
 - ✅ **明白 in-database 的價值**：資料不動，演算法進去 → 快速、省記憶體
 
 **對比：如果用 Python + NetworkX**

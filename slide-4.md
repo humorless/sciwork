@@ -37,12 +37,12 @@ style: |
 Unit 3 跑了 PageRank，輸出：
 
 ```
-Product: "USB Hub XR-200"  score: 0.0043
+node.ID: 45  rank: 0.001586
 ```
 
 **這個數字說明了什麼？沒人知道。**
 
-你能告訴用戶「為什麼推薦這個」嗎？
+你能告訴用戶「為什麼推薦關注這個賬戶」嗎？
 
 ---
 
@@ -61,7 +61,7 @@ Product: "USB Hub XR-200"  score: 0.0043
 **Graph 路徑推理**：
 
 ```
-你買了 A → 也買了 A 的人還買了 B → B 的人還買了 C
+你關注了 A → A 也關注了 B → B 關注的人多
 ```
 
 → 路徑本身就是推薦理由
@@ -73,36 +73,38 @@ Product: "USB Hub XR-200"  score: 0.0043
 **Query**：
 
 ```cypher
-MATCH (p:Product {id: 'B0001'})
-      -[:CO_PURCHASED]->(mid:Product)
-      -[:CO_PURCHASED]->(reco:Product)
+MATCH (p:account {ID: 45})
+      -[:follows]->(mid:account)
+      -[:follows]->(reco:account)
 WHERE reco <> p
-RETURN p.title, mid.title, reco.title
+RETURN p.ID AS source,
+       mid.ID AS via,
+       reco.ID AS recommended
 LIMIT 10
 ```
 
 **輸出**：
 
 ```
-p.title       mid.title       reco.title
-──────────    ─────────────   ──────────────
-USB Hub       HDMI Cable      Monitor Stand
-USB Hub       HDMI Cable      Laptop Cooler
+source  via   recommended
+────    ─────  ──────────
+45      1036   1037
+45      1036   50
 ```
 
-推薦理由就在 `mid.title` 這一欄——人一眼就明白。
+推薦理由就在 `via` 這一欄——帳戶 45 關注了 1036，而 1036 也關注了 1037，所以推薦 45 去關注 1037。
 
 ---
 
 # 可解釋性的實際價值
 
-**推薦系統**：用戶看到「因為你買了 X，也買了 X 的人還買了 Y」→ 信任度提升
+**推薦系統**：用戶看到「因為你關注 X，也關注 X 的人關注 Y」→ 信任度提升
 
-**Supply chain 風控**：「S2 斷供會影響哪些產品線？」→ 路徑可追溯，可審計
+**Supply chain 風控**：「供應商 S 斷供影響哪些下游？」→ 依賴鏈路徑可審計
 
-**金融風控**：法規要求拒絕必須附理由 → Graph 路徑天然滿足
+**金融風控**：「為什麼拒絕這筆交易？」→ 風險路徑可解釋，符合法規要求
 
-**知識圖譜**：「從文獻 A 推導到結論 B」→ 推理鏈可驗證
+**知識圖譜**：「從事實 A 推導到結論 B」→ 推理鏈可驗證
 
 ---
 
@@ -126,21 +128,6 @@ Graph 系統天然滿足兩者。
 
 ---
 
-# 視覺化工具：G.V()
-
-文字輸出有時不夠直觀，用 **G.V()** 把路徑畫出來
-
-連線方式：
-
-```bash
-# 在 Ladybug Explorer 設定中加入 G.V() 連線
-```
-
-接著在 G.V() 執行同一個 Cypher query → 自動渲染成圖形
-
-**視覺化特別有用的場景**：Unit 2 的多跳依賴鏈、Unit 4 的推薦路徑
-
----
 
 # 四個 Unit 的貫穿主軸
 
@@ -148,7 +135,7 @@ Graph 系統天然滿足兩者。
 |------|------|------|
 | 1 | 為什麼用 Graph + 建模 | 關係是一等公民 |
 | 2 | Cypher 多跳查詢 | 路徑就是邏輯 |
-| 3 | In-database 演算法 | 資料不動，演算法進去 |
+| 3 | In-database Analytics | 資料不動，演算法進去 |
 | 4 | 可解釋性 | 路徑就是解釋 |
 
 **機器跑得動、人看得懂**——貫穿全天
@@ -176,7 +163,7 @@ Graph 系統天然滿足兩者。
 # 實作目標（40 min）
 
 1. ✅ 查詢推薦路徑，確認結果可解釋
-2. ✅ 用 G.V() 視覺化路徑
+2. ✅ 觀察表格結果，找出影響力節點
 3. ✅ 自己修改 query，設計推薦邏輯
 4. ✅ 開放討論：你的系統有沒有 Graph 的機會？
 
@@ -185,52 +172,57 @@ Graph 系統天然滿足兩者。
 # Step 1（10 min）：路徑查詢
 
 ```cypher
--- 兩跳推薦路徑，顯示中間節點
-MATCH (p:Product {id: 'B0001'})
-      -[:CO_PURCHASED]->(mid:Product)
-      -[:CO_PURCHASED]->(reco:Product)
+-- 兩跳推薦路徑：45 → via → recommended
+MATCH (p:account {ID: 45})
+      -[:follows]->(mid:account)
+      -[:follows]->(reco:account)
 WHERE reco <> p
-RETURN p.title AS source,
-       mid.title AS via,
-       reco.title AS recommended
-ORDER BY reco.title
+RETURN p.ID AS source,
+       mid.ID AS via,
+       reco.ID AS recommended
+ORDER BY reco.ID
 LIMIT 20
 ```
 
-確認每一行都能說出推薦理由
+確認每一行都能說出推薦理由：「45 關注了 via，via 也關注了 recommended」
 
 ---
 
-# Step 2（15 min）：G.V() 視覺化
+# Step 2（15 min）：觀察結果模式
 
-在 G.V() 執行同一個 query，觀察：
-- 路徑的形狀
-- 哪些節點是樞紐（連接很多路徑）
-- 哪些推薦路徑特別長
+在 Ladybug Explorer 執行 Step 1 的 query，看表格結果找規律：
 
-**嘗試修改**：
-- 把 `*1..2` 改成 `*1..3`，路徑圖會變得更複雜嗎？
-- 限制只看某個 category 的商品
+**看表格找規律**：
+- 有多少條推薦路徑？
+- 哪個中間節點（via）出現最頻繁？ 
+  （這意味著它最有影響力）
+- 相同的 via 對應多少個不同的推薦目標？
+
+**修改 query 來測試**：
+- 改成其他起點帳戶：`{ID: 50}`、`{ID: 1036}`
+  → 觀察不同用戶的推薦模式有什麼不同
+- 擴展到三跳路徑看會有什麼變化
 
 ---
 
 # Step 3（10 min）：設計你的推薦邏輯
 
-不只是「買了 A 的人也買了 B」，你可以加上條件：
+不只是「A 關注的人關注 B」，你可以加上條件，篩選值得追蹤的賬戶：
 
 ```cypher
--- 只推薦評分高的商品
-MATCH (p:Product {id: 'B0001'})
-      -[:CO_PURCHASED]->(mid)
-      -[:CO_PURCHASED]->(reco:Product)
-WHERE reco.avg_rating >= 4.0
-  AND reco <> p
-RETURN reco.title, reco.avg_rating
-ORDER BY reco.avg_rating DESC
+-- 只推薦被很多人關注的賬戶
+MATCH (p:account {ID: 45})
+      -[:follows]->(mid:account)
+      -[:follows]->(reco:account)
+WHERE reco <> p
+WITH reco, COUNT(*) AS paths
+WHERE paths >= 2  -- 至少有 2 條獨立推薦路徑
+RETURN reco.ID, paths
+ORDER BY paths DESC
 LIMIT 10
 ```
 
-**你在做的事**：設計邏輯，不是調參數
+**你在做的事**：設計邏輯（篩選條件），不是調參數
 
 ---
 
@@ -251,7 +243,9 @@ LIMIT 10
 - ✅ **問題意識**：什麼問題適合用 Graph 思考
 - ✅ **建模能力**：節點、關係、屬性的設計方式
 - ✅ **查詢能力**：Cypher 多跳查詢
-- ✅ **計算工具**：六個 in-database algorithm 的選型直覺
+- ✅ **Analytics 工具**：六個圖論問題的解法（Cypher + ALGO）
 - ✅ **可解釋性**：路徑就是推理過程
+
+**機器跑得動、人看得懂** ——建立信任的基礎
 
 謝謝參與！
