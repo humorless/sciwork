@@ -235,7 +235,7 @@ RETURN b                        // 整個節點
 
 ---
 
-# Step 1（10 min）：多跳查詢
+# Step 1a：無限制多跳
 
 Supply chain dataset，繼續用：
 
@@ -246,9 +246,32 @@ MATCH (a:Component {name: 'X'})
 RETURN DISTINCT b.name
 ```
 
+**預期結果**：
+```
+A, B, C, D, E
+```
+（5 個零件）
+
+---
+
+# Step 1b：控制跳數
+
 **試試看**：
-- 把 `*` 改成 `*1..2`，結果有什麼不同？
-- 換另一個起點零件
+- 把 `*` 改成 `*1..1`（只看 1 跳）
+  ```cypher
+  MATCH (a:Component {name: 'X'})
+        -[:DEPENDS_ON*1..1]->(b:Component)
+  RETURN DISTINCT b.name
+  ```
+  預期結果：A, B, E（3 個）
+
+- 把 `*` 改成 `*1..2`（只看 1-2 跳）
+  ```cypher
+  MATCH (a:Component {name: 'X'})
+        -[:DEPENDS_ON*1..2]->(b:Component)
+  RETURN DISTINCT b.name
+  ```
+  預期結果：A, B, C, D, E（5 個）
 
 ---
 
@@ -275,7 +298,28 @@ ORDER BY s.name
 
 ---
 
-# Step 3（10 min）：換 Social Network Dataset
+# Social Network Dataset 說明
+
+**10 個 User**：alice, bob, carol, dave, eve, frank, grace, henry, iris, jack
+
+**追蹤關係（18 條 FOLLOWS 邊）**：
+
+```
+alice    → bob, carol, dave
+bob      → eve, frank
+carol    → frank, grace
+dave     → eve, iris
+eve      → grace, henry
+frank    → henry, jack
+grace    → iris
+henry    → jack, alice
+iris     → bob
+jack     → carol
+```
+
+---
+
+# Step 3a（5 min）：一跳追蹤
 
 載入 Workshop 提供的 Social Network dataset：
 
@@ -289,14 +333,35 @@ MATCH (u:User {username: 'alice'})-[:FOLLOWS]->(v:User)
 RETURN v.username
 ```
 
+**預期結果**：
+```
+bob
+carol
+dave
+```
+
+---
+
+# Step 3b（5 min）：兩跳追蹤鏈
+
 ```cypher
 // 兩跳：追蹤鏈延伸
 MATCH (u:User {username: 'alice'})-[:FOLLOWS*1..2]->(v:User)
+WHERE v <> u
 RETURN DISTINCT v.username
 LIMIT 20
 ```
 
-**注意**：語法完全一樣，只是節點類型和關係名稱不同。
+**預期結果**：
+```
+bob
+carol
+dave
+eve
+frank
+grace
+iris
+```
 
 ---
 
@@ -304,10 +369,12 @@ LIMIT 20
 
 你現在能做到：
 
-- ✅ 讀懂一個 Cypher path pattern
-- ✅ 用 `*` 控制跳數
-- ✅ 加 `WHERE` 過濾中間節點的屬性
-- ✅ 把學到的語法套到新的 dataset
+- ✅ 讀懂一個 Cypher path pattern，看出「我要走哪條路」
+- ✅ 用 `*` 控制跳數（`*1..1` 一跳、`*1..2` 兩跳、`*` 無限制）
+- ✅ 加 `WHERE` 過濾中間節點的屬性（比如 `critical = true`）
+- ✅ 把學到的語法套到新的 dataset，同一個邏輯兩個領域都用
+
+**核心直覺**：Cypher 語法反映了你要找的路，不需要 JOIN、不需要 recursive CTE。
 
 下堂課：不手寫查詢，讓 DB 直接跑演算法
 
@@ -315,10 +382,10 @@ LIMIT 20
 
 # 延伸：Ladybug 官方 Dataset
 
-有興趣的學員可以自行下載來玩：
+有興趣的學員可以自行下載來玩（課後）：
 
 **① tinysnb（小型社交網路，含 Person / Knows）**
-適合快速試玩 multi-hop 查詢，全部 CSV 加起來 < 20 KB
+適合快速試玩 Unit 2 的 multi-hop 查詢，全部 CSV 加起來 < 20 KB，下載後 1 秒就能跑
 
 ```bash
 # schema + data 各自下載
@@ -328,7 +395,8 @@ curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/tinysnb/eKnows.
 ```
 
 **② Amazon co-purchase graph（SNAP amazon0601）**
-真實電商資料，約 40 萬節點、340 萬條邊，schema 為 `account / follows`
+真實電商資料，約 40 萬節點、340 萬條邊，schema 為 `Product / CO_PURCHASED`
+→ **Unit 3 會用這個 dataset 跑 in-database 演算法**，所以提前了解規模
 
 ```bash
 curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/snap/amazon0601/csv/schema.cypher
