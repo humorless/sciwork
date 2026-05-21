@@ -1,6 +1,6 @@
 # 圖學資料庫與其應用
 
-> 適合受眾：Graph 概念全新、四個核心概念（graph modeling、Cypher、in-database 計算、可解釋性）都是第一次接觸的工程師；具備基本演算法直覺（BFS/DFS），不一定熟悉 SQL。
+> 適合受眾：Graph 概念全新、四個核心概念（graph modeling、Cypher、in-database analytics、可解釋性）都是第一次接觸的工程師；具備基本演算法直覺（BFS/DFS），不一定熟悉 SQL。
 
 **設計原則**：每單元只引入一個新概念，實作目標明確且可完成。
 
@@ -51,7 +51,7 @@
 
 ---
 
-### Unit 3｜In-database 計算：Algorithm Tour
+### Unit 3｜In-database Analytics：Algorithm Tour
 
 **Talk（20 min）**
 - 痛點：傳統做法是把資料拉出來，用 Python / NetworkX 算，再寫回去——資料量一大，這個流程就崩了
@@ -72,9 +72,9 @@
 | **K-Core Decomposition** | 最核心的高度互連商品群是哪些？ |
 
 - 對比：如果用 Python 自己實作 PageRank，需要幾行？Ladybug 是幾行？
-- 目標：親身感受 in-database 計算的簡潔性，以及每個 algorithm 能回答什麼類型的問題
+- 目標：親身感受 in-database analytics的簡潔性，以及每個 algorithm 能回答什麼類型的問題
 
-**本單元引入的新概念**：in-database graph 計算 + Algorithm 選型直覺
+**本單元引入的新概念**：in-database graph analytics + Algorithm 選型直覺
 
 ---
 

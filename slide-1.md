@@ -228,7 +228,7 @@ vim supply-chain.cypher
 |------|------|----------|
 | **1（現在）** | Graph 基礎 | 為什麼用 Graph？怎麼建模？|
 | 2 | Cypher | 怎麼寫多跳查詢？|
-| 3 | In-database 計算 | 讓 DB 跑演算法 |
+| 3 | In-database Analytics | 讓 DB 跑演算法 |
 | 4 | 可解釋性 | 路徑就是解釋 |
 
 貫穿主軸：**機器跑得動、人看得懂**
