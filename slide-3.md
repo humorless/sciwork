@@ -62,40 +62,70 @@ DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
 
 ---
 
-# 六個 Graph Algorithms
+# 看圖時，我們問什麼？
 
-| Algorithm | 解決的問題 | 實現方式 |
-|-----------|-----------|---------|
-| Shortest Paths | A 到 B 最短走幾跳？ | **Cypher 查詢** |
-| PageRank | 誰是網絡裡最重要的節點？ | ALGO extension |
-| Louvain | 圖裡自然地形成了哪些群組？ | ALGO extension |
-| Weakly Connected Components | 整個圖有幾個獨立的連通塊？ | ALGO extension |
-| Strongly Connected Components | 哪些節點互相可以到達對方？ | ALGO extension |
-| K-Core Decomposition | 最密集連接的核心子圖是哪些？ | ALGO extension |
+## ❓ 哪些點最重要、最核心？
 
----
-
-# Algorithm 1：Shortest Paths
-
-**問的問題**：節點 A 到節點 B 最短走幾跳？
-
-```cypher
-MATCH path = (a:account {ID: 45})
-            -[:follows*1..3]->(b:account)
-WHERE b.ID = 1036
-RETURN a.ID AS source,
-       b.ID AS target,
-       length(path) AS hops
-LIMIT 5
+```
+   ●───○
+  ╱ ╲
+ ●   ◎ ← 最大的節點最重要
+  ╲ ╱
+   ◯
 ```
 
-**結果解讀**：hops = 關注鏈的長度；越短 = 越相近
-
-**類比**：Supply chain 版本是「X 到 Y 最少幾個零件中間商」
+PageRank（全局排名）、K-Core Decomposition（本地密度）
 
 ---
 
-# Algorithm 2：PageRank
+## ❓ 哪些點可以算是同一群的？
+
+```
+ 🔴─🔴─🔴
+ │   │
+ 🔴─🔴
+
+ 🔵  🟠
+ │   │
+ 🔵  🟠
+```
+
+Louvain、Weakly Connected Components、Strongly Connected Components
+
+---
+
+## ❓ 從 A 點到 B 點怎麼走？
+
+```
+  A
+  │
+  ↓
+  ◎─┐
+  │ │
+  ↓ ↓
+  B ◎
+  
+最短路徑 = 最少的跳躍
+```
+
+Shortest Paths
+
+---
+
+# 六個 Graph Algorithms
+
+| Algorithm | 解決的問題 | 實現方式 | 問題類型 |
+|-----------|-----------|---------|---------|
+| PageRank | 誰是網絡裡最重要的節點？ | ALGO extension | **最重要節點** |
+| K-Core Decomposition | 最密集連接的核心子圖是哪些？ | ALGO extension | **最重要節點** |
+| Louvain | 圖裡自然地形成了哪些群組？ | ALGO extension | **同群偵測** |
+| Weakly Connected Components | 整個圖有幾個獨立的連通塊？ | ALGO extension | **同群偵測** |
+| Strongly Connected Components | 哪些節點互相可以到達對方？ | ALGO extension | **同群偵測** |
+| Shortest Paths | A 到 B 最短走幾跳？ | **Cypher 查詢** | **路徑查詢** |
+
+---
+
+# Algorithm 1：PageRank
 
 **問的問題**：誰是網絡裡最重要的節點？
 
@@ -110,6 +140,22 @@ LIMIT 10
 **結果解讀**：rank 越高 = 被越多人 follow
 
 **類比**：Supply chain 版本是「哪個零件最多人依賴」
+
+---
+
+# Algorithm 2：K-Core Decomposition
+
+**問的問題**：最密集連接的核心子圖是哪些？
+
+```cypher
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL k_core_decomposition('Graph')
+RETURN k_degree, COUNT(*) AS num_nodes
+ORDER BY k_degree DESC
+LIMIT 10
+```
+
+**結果解讀**：k_degree 越高 = 節點與越多其他節點互相連接
 
 ---
 
@@ -161,19 +207,23 @@ LIMIT 10
 
 ---
 
-# Algorithm 6：K-Core Decomposition
+# Algorithm 6：Shortest Paths
 
-**問的問題**：最密集連接的核心子圖是哪些？
+**問的問題**：節點 A 到節點 B 最短走幾跳？
 
 ```cypher
-CALL project_graph('Graph', ['account'], ['follows']);
-CALL k_core_decomposition('Graph')
-RETURN k_degree, COUNT(*) AS num_nodes
-ORDER BY k_degree DESC
-LIMIT 10
+MATCH path = (a:account {ID: 45})
+            -[:follows*1..3]->(b:account)
+WHERE b.ID = 1036
+RETURN a.ID AS source,
+       b.ID AS target,
+       length(path) AS hops
+LIMIT 5
 ```
 
-**結果解讀**：k_degree 越高 = 節點與越多其他節點互相連接
+**結果解讀**：hops = 關注鏈的長度；越短 = 越相近
+
+**類比**：Supply chain 版本是「X 到 Y 最少幾個零件中間商」
 
 ---
 
@@ -217,16 +267,16 @@ save_results_to_db(scores)       # 寫回
 
 # 小結
 
-**六個 algorithm，六種問法**
+**六個 algorithm，對應三個問題**
 
 | 問題類型 | Algorithm | 實現 |
 |---------|-----------|------|
-| 最短路徑 | Shortest Paths | Cypher |
-| 重要性排名 | PageRank | ALGO |
+| 最重要節點 | PageRank | ALGO |
+| 最重要節點 | K-Core | ALGO |
 | 自然群組 | Louvain | ALGO |
 | 連通性（弱） | WCC | ALGO |
 | 連通性（強） | SCC | ALGO |
-| 核心密度 | K-Core | ALGO |
+| 路徑查詢 | Shortest Paths | Cypher |
 
 **in-database 有兩種實現方式**：
 - Cypher 查詢：靈活，適合自訂邏輯
@@ -244,12 +294,12 @@ save_results_to_db(scores)       # 寫回
 
 **把六個 algorithm 都跑一遍：**
 
-1. ✅ Shortest Paths → 查最短路徑（Cypher）
-2. ✅ PageRank → 找重要節點（ALGO）
+1. ✅ PageRank → 找重要節點（ALGO）
+2. ✅ K-Core → 找核心節點（ALGO）
 3. ✅ Louvain → 找社群（ALGO）
 4. ✅ WCC → 找弱連通分量（ALGO）
 5. ✅ SCC → 找強連通分量（ALGO）
-6. ✅ K-Core → 找核心節點（ALGO）
+6. ✅ Shortest Paths → 查最短路徑（Cypher）
 
 每個 algorithm 看結果、理解輸出、5–7 分鐘
 
