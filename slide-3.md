@@ -155,7 +155,7 @@ ORDER BY k_degree DESC
 LIMIT 10
 ```
 
-**結果解讀**：k_degree 越高 = 節點與越多其他節點互相連接
+**結果解讀**：k_degree = k 表示：移除所有度數 < k 的節點後，該節點仍在圖上；k_degree 越高 = 節點越在核心層
 
 ---
 
