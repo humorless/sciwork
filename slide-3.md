@@ -74,7 +74,7 @@ DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
    ◯
 ```
 
-PageRank（全局排名）、K-Core Decomposition（本地密度）
+PageRank（全局排名）、K-Core Decomposition（層級結構）
 
 ---
 
