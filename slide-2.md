@@ -396,7 +396,7 @@ curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/tinysnb/eKnows.
 
 **② Amazon co-purchase graph（SNAP amazon0601）**
 真實電商資料，約 40 萬節點、340 萬條邊，schema 為 `Product / CO_PURCHASED`
-→ **Unit 3 會用這個 dataset 跑 in-database analytics**，所以提前了解規模
+→ <span style="color: red;">**Unit 3 會用這個 dataset 跑 in-database analytics**，所以提前了解規模</span>
 
 ```bash
 curl -O https://raw.githubusercontent.com/LadybugDB/dataset/main/snap/amazon0601/csv/schema.cypher

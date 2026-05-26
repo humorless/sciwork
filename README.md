@@ -45,7 +45,7 @@ npm install -g @marp-team/marp-cli
 ### 轉出單一檔案
 
 ```bash
-marp $filename --allow-local-files --pdf
+marp $filename --allow-local-files --html --pdf
 ```
 
 ### 轉出全部投影片
