@@ -270,6 +270,15 @@ docker run -p 8000:8000 --rm ghcr.io/ladybugdb/explorer:latest
 
 # Step 2（5 min）：建立資料庫並載入資料
 
+- 安裝
+
+```
+brew install ladybug
+# 或
+curl -fsSL https://install.ladybugdb.com | sh
+```
+
+- 匯入
 ```bash
 lbug unit-1.lbug < supply-chain.cypher
 ```
