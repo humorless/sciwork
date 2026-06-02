@@ -114,7 +114,7 @@ style: |
 - **MIT License**：開源，可商用
 
 ```bash
-# 安裝
+# 安裝（版本 0.17.0）
 brew install ladybug
 # 或
 curl -fsSL https://install.ladybugdb.com | sh
@@ -255,7 +255,7 @@ vim supply-chain.cypher
 # Step 1（5 min）：認識 Ladybug Explorer
 
 ```bash
-docker run -p 8000:8000 --rm ghcr.io/ladybugdb/explorer:latest
+docker run -p 8000:8000 --rm ghcr.io/ladybugdb/explorer:0.17.0
 ```
 
 開啟瀏覽器，連上 `http://localhost:8000`
@@ -270,9 +270,9 @@ docker run -p 8000:8000 --rm ghcr.io/ladybugdb/explorer:latest
 
 # Step 2（5 min）：建立資料庫並載入資料
 
-- 安裝
+- 安裝（版本 0.17.0）
 
-```
+```bash
 brew install ladybug
 # 或
 curl -fsSL https://install.ladybugdb.com | sh
@@ -291,7 +291,7 @@ lbug unit-1.lbug < supply-chain.cypher
 docker run -p 8000:8000 \
   -v $(pwd):/database \
   -e LBUG_FILE=unit-1.lbug \
-  --rm ghcr.io/ladybugdb/explorer:latest
+  --rm ghcr.io/ladybugdb/explorer:0.17.0
 ```
 
 切換到 **Schema panel** 確認：

@@ -1,5 +1,28 @@
 # Graph Analysis Workshop
 
+## 事前準備
+
+### 必需軟體版本
+
+- **Ladybug DB CLI**: 0.17.0
+  ```bash
+  brew install ladybug
+  ```
+
+- **Ladybug Explorer**: 0.17.0（Docker）
+  ```bash
+  docker pull ghcr.io/ladybugdb/explorer:0.17.0
+  ```
+
+### 驗證安裝
+
+```bash
+# 確認 lbug 版本
+lbug --version
+```
+
+---
+
 ## 重要檔案
 
 ### 課程文件
