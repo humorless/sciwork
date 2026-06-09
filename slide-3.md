@@ -350,6 +350,35 @@ LOAD EXTENSION algo;
 
 ---
 
+# 實測執行時間（40 萬節點 + 340 萬邊）
+
+**在標準筆電上的實際耗時**（包含編譯時間）
+
+| Algorithm | 執行時間 | 說明 |
+|-----------|---------|------|
+| PageRank | ~18.0 秒 | 迭代收斂，耗時最長 |
+| K-Core Decomposition | ~3.5 秒 | 層級剝離，快速 |
+| Louvain | ~1.6 秒 | 社群合併，最快 |
+| Weakly Connected Components | ~3.8 秒 | 連通性掃描 |
+| Strongly Connected Components | ~4.1 秒 | 強連通分析 |
+| Shortest Paths（Cypher） | ~0.03 秒 | 單一路徑查詢，即時 |
+
+**總耗時**：~30 秒（6 個算法）
+
+---
+
+# in-database vs. Python 的真實對比
+
+**同樣的 340 萬邊，用 Python + NetworkX**：
+- 拉資料到應用層：10-20 秒（網路 I/O）
+- 建圖到記憶體：5-10 秒（轉換 + GC）
+- 演算法執行：?? 秒（單線程）
+
+**Ladybug in-database**：
+→ **總耗時：30 秒**
+
+---
+
 # 你現在能做到
 
 - ✅ 知道有六個圖論問題的常用解法
@@ -358,12 +387,6 @@ LOAD EXTENSION algo;
 - ✅ **知道選型依據**：什麼問題選什麼算法、什麼場景選 Cypher、什麼場景選 ALGO
 - ✅ **明白 in-database 的價值**：資料不動，演算法進去 → 快速、省記憶體
 
-**對比：如果用 Python + NetworkX**
-- 拉 340 萬筆邊到應用層：網路 I/O + 轉換
-- 建圖到記憶體：GC 壓力大
-- 執行演算法：幾分鐘
-→ 總耗時：可能 5-10 分鐘
-
-**用 Ladybug in-database**：2-3 秒
+**對比：如果用 Python + NetworkX (相對耗時、耗資源)**
 
 下堂課：結果出來了，怎麼讓人看得懂它的推理過程？
