@@ -26,8 +26,32 @@ style: |
 
 <!-- _class: lead -->
 
+
+# 突破 SQL 查詢極限：用 Graph 思維處理複雜關聯與多跳推論
+
+---
+
+# Laurence Chen / 陳家宏
+
+- Clojure, dbt-Taipei 線下活動主辦人
+- IT 顧問、講者、作家
+- 從試算表到資料平台－重構資料工程的技術與團隊
+
+![](images/book.png)
+
+---
+
+# 大綱
+
+- Graph 是什麼？
+- Cypher：用結構描述問題
+- In-database Analytics：Algorithm Tour
+- 可解釋性：路徑就是解釋
+
+--- 
+
 # Graph 是什麼？
-# 為什麼不用 SQL / Python 就好
+> 為什麼不用 SQL / Python 就好
 
 **Unit 1** | Graph Analysis Workshop
 
