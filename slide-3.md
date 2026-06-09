@@ -34,14 +34,16 @@ style: |
 
 # 對比：傳統 vs. In-database
 
-**❌ 傳統做法**
+**核心原則：Move Code to Data, Not Data to Code**
+
+**❌ 傳統做法** (Move Data to Code)
 ```
 DB ──► 拉資料到 App ──► Python 計算 ──► 寫回 DB
        (幾百萬筆)      (慢、記憶體吃緊)
 ```
 痛點：網路 I/O、格式轉換、記憶體壓力
 
-**✅ In-database Analytics**
+**✅ In-database Analytics** (Move Code to Data)
 ```
 DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
 ```
