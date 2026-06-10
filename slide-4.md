@@ -80,18 +80,6 @@ ORDER BY in1.rank DESC
 LIMIT 10
 ```
 
-**進一步理解：二跳反向**
-
-```cypher
--- 二跳反向：誰關注了那些關注 45 的人？
-MATCH (in2:account)
-      -[:follows]->(in1:account)
-      -[:follows]->(p:account {ID: 45})
-RETURN in2.ID, in2.rank, in1.ID, in1.rank
-ORDER BY in2.rank DESC
-LIMIT 10
-```
-
 **結論**：45 的排名高，因為有這些高排名的帳戶指向它（直接或間接）。路徑本身解釋了結果。
 
 ---
@@ -176,9 +164,9 @@ RETURN mid.ID AS via, reco.ID AS recommended
 # 實作目標（40 min）
 
 1. ✅ 準備 PageRank 數據（導入到數據庫）
-2. ✅ 查詢反向路徑 + 排名，確認結果可解釋
-3. ✅ 觀察表格結果，找出影響力節點
-4. ✅ 自己修改 query，設計分析邏輯
+2. ✅ Step 1：一跳反向 + 排名
+3. ✅ Step 2：統計直接 Follower
+4. ✅ Step 3：找出最重要的「中介」
 
 ---
 
@@ -193,18 +181,17 @@ CREATE NODE TABLE account_pagerank
 
 ---
 
-# 準備階段：導入 + 計算
+# 準備階段：計算 + 匯入
 
-**導入 CSV**
+**計算 PageRank 並且存到檔案**
+```cypher
+CALL project_graph('Graph', ['account'], ['follows']);
+COPY (CALL page_rank('Graph') RETURN node.ID AS account_id, rank) TO 'pagerank.csv' (header=true);
+```
+**匯入 CSV**
 ```cypher
 COPY account_pagerank FROM 'pagerank.csv'
   (HEADER=TRUE, DELIMITER=',');
-```
-
-**計算 PageRank**
-```cypher
-CALL project_graph('Graph', ['account'], ['follows']);
-CALL page_rank('Graph') RETURN node.ID, rank;
 ```
 
 ✅ 現在可以 JOIN 查詢
@@ -226,56 +213,51 @@ ORDER BY pr.rank DESC LIMIT 20
 
 ---
 
-# Step 2：二跳反向路徑
-
-```cypher
-MATCH (in2)-[:follows]->(in1)-[:follows]->(p:account {ID: 45})
-MATCH (pr2:account_pagerank {account_id: in2.ID})
-RETURN in2.ID, pr2.rank, in1.ID
-ORDER BY pr2.rank DESC LIMIT 20
-```
-
-**結果**：間接指向 45 的路徑
-
-```
-in2.ID  │ rank     │ via
-────────┼──────────┼─────
-403392  │ 0.000025 │ 1041
-403367  │ 0.000021 │ 1041
-```
-
-**試試** `{ID: 50}` 或 `{ID: 1036}`
-
----
-
-# Step 3A：統計直接 Follower
+# Step 2：統計直接 Follower
 
 ```cypher
 MATCH (in1)-[:follows]->(p:account {ID: 45})
 MATCH (pr:account_pagerank {account_id: in1.ID})
-RETURN COUNT(*) followers,
-       SUM(pr.rank) total_rank,
-       AVG(pr.rank) avg_rank
+RETURN COUNT(*) AS followers,
+       SUM(pr.rank) AS total_rank,
+       AVG(pr.rank) AS avg_rank
 ```
+
+**結果**：
+```
+followers │ total_rank │ avg_rank
+──────────┼────────────┼──────────
+2487      │ 3.241      │ 0.001302
+```
+
+**理解**：
+- 2,487 個帳戶直接關注 45
+- 他們的平均排名是 0.001302（都是高排名帳戶）
 
 ---
 
-# Step 3B：最重要的「中介」
+# Step 3：最重要的「中介」
 
 ```cypher
 MATCH (in2)-[:follows]->(in1)-[:follows]->(p:account {ID: 45})
 MATCH (pr:account_pagerank {account_id: in1.ID})
-RETURN in1.ID, COUNT(DISTINCT in2) upstream
+RETURN in1.ID, COUNT(DISTINCT in2) AS upstream
 ORDER BY upstream DESC LIMIT 10
 ```
 
 **結果**：
 ```
 in1.ID │ upstream
-───────┼──────
-1041   │ 2751 ← 關鍵樞紐
+───────┼──────────
+1041   │ 2751 ← 關鍵樞紐！
 1036   │ 564
+1039   │ 529
 ```
+
+**理解**：
+- `in1.ID = 1041` 是最重要的「連接者」
+- 有 **2,751 個帳戶**通過 1041 間接指向 45
+- 這說明 1041 在網絡中的影響力有多大
 
 ---
 
