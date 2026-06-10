@@ -73,12 +73,15 @@ node.ID: 45  rank: 0.001586
 **Query**（反向路徑）：
 
 ```cypher
--- 一跳反向：誰關注了 45？
+// 一跳反向：誰關注了 45？
 MATCH (in1:account)-[:follows]->(p:account {ID: 45})
-RETURN in1.ID AS follower, in1.rank
-ORDER BY in1.rank DESC
+MATCH (pr:account_pagerank {account_id: in1.ID})
+RETURN in1.ID AS follower, pr.rank
+ORDER BY pr.rank DESC
 LIMIT 10
 ```
+
+（`account_pagerank` 是預先算好的 PageRank 結果表，建法見實作段）
 
 **結論**：45 的排名高，因為有這些高排名的帳戶指向它（直接或間接）。路徑本身解釋了結果。
 
@@ -89,7 +92,7 @@ LIMIT 10
 **正向路徑**用於推薦：
 
 ```cypher
--- 45 關注的人，也都關注了誰？
+// 45 關注的人，也都關注了誰？
 MATCH (p:account {ID: 45})
       -[:follows]->(mid:account)
       -[:follows]->(reco:account)
