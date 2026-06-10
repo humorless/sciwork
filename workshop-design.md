@@ -7,7 +7,7 @@
 **Dataset 策略**
 - 基礎練習：手建 Supply chain（BOM）小型 dataset（8 個節點、12 條邊），講者提供，不需下載
 - Unit 1-2 練習：Supply chain dataset + Social network dataset
-- Unit 3-4 主線實作：Amazon co-purchase graph（SNAP amazon0601）——官方以 account/follows 社交網絡 schema 發布
+- Unit 3-4 主線實作：Amazon co-purchase graph（SNAP amazon0601）——官方以 account/follows 社交網路 schema 發布
 
 ---
 
@@ -67,8 +67,8 @@
 | Algorithm | 問的問題 | 實現方式 |
 |---|---|---|
 | **Shortest Paths** | A 到 B 最短走幾跳？關注鏈最短是什麼？ | Cypher 查詢 |
-| **PageRank** | 誰是網絡裡最重要的節點（被最多人關注）？ | ALGO extension |
-| **Louvain** | 網絡裡自然地形成了哪些社群？ | ALGO extension |
+| **PageRank** | 誰是網路裡最重要的節點（被最多人關注）？ | ALGO extension |
+| **Louvain** | 網路裡自然地形成了哪些社群？ | ALGO extension |
 | **Weakly Connected Components（WCC）** | 整個圖裡有幾個獨立的連通分量？ | ALGO extension |
 | **Strongly Connected Components（SCC）** | 哪些節點互相可以到達對方？ | ALGO extension |
 | **K-Core Decomposition** | 最核心的高度互連節點是哪些？ | ALGO extension |

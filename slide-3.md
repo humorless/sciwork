@@ -118,7 +118,7 @@ Shortest Paths
 
 | Algorithm | 解決的問題 | 實現方式 | 問題類型 |
 |-----------|-----------|---------|---------|
-| PageRank | 誰是網絡裡最重要的節點？ | ALGO extension | **最重要節點** |
+| PageRank | 誰是網路裡最重要的節點？ | ALGO extension | **最重要節點** |
 | K-Core Decomposition | 最密集連接的核心子圖是哪些？ | ALGO extension | **最重要節點** |
 | Louvain | 圖裡自然地形成了哪些群組？ | ALGO extension | **同群偵測** |
 | Weakly Connected Components | 整個圖有幾個獨立的連通塊？ | ALGO extension | **同群偵測** |
@@ -129,7 +129,7 @@ Shortest Paths
 
 # Algorithm 1：PageRank
 
-**問的問題**：誰是網絡裡最重要的節點？
+**問的問題**：誰是網路裡最重要的節點？
 
 ```cypher
 CALL project_graph('Graph', ['account'], ['follows']);
@@ -163,7 +163,7 @@ LIMIT 10
 
 # Algorithm 3：Louvain（Community Detection）
 
-**問的問題**：網絡裡自然地形成了哪些群組？
+**問的問題**：網路裡自然地形成了哪些群組？
 
 ```cypher
 CALL project_graph('Graph', ['account'], ['follows']);
@@ -247,7 +247,7 @@ G = nx.DiGraph(edges)            # 建圖（記憶體吃緊）
 scores = nx.pagerank(G)          # 計算
 save_results_to_db(scores)       # 寫回
 ```
-→ 四步，資料搬兩次，整個圖（GB 級）都要載入內存
+→ 四步，資料搬兩次，整個圖（GB 級）都要載入記憶體
 
 ---
 
@@ -264,7 +264,7 @@ save_results_to_db(scores)       # 寫回
 | 哪些節點互相可達？ | **SCC** | 反饋迴路、強關聯性 |
 | A 到 B 的最短路徑？ | **Cypher 多跳查詢** | 推薦路徑、依賴關係 |
 
-**思考方式**：先定義問題 → 看表格找算法 → 跑一行 query
+**思考方式**：先定義問題 → 看表格找演算法 → 跑一行 query
 
 ---
 
@@ -346,9 +346,9 @@ INSTALL ALGO;
 LOAD EXTENSION algo;
 ```
 
-**按順序跑五個 algorithm**
+**依序跑五個 algorithm**
 
-每個算法的 query 在投影片上，直接複製貼上執行
+每個演算法的 query 在投影片上，直接複製貼上執行
 
 遇到問題 → 舉手
 
@@ -367,7 +367,7 @@ LOAD EXTENSION algo;
 | Strongly Connected Components | ~4.2 秒 | 強連通分析 |
 | Shortest Paths（Cypher） | ~0.01 秒 | 單一路徑查詢，即時 |
 
-**總耗時**：~32 秒（6 個算法）| **記憶體峰值**：~430 MB（process peak RSS）
+**總耗時**：~32 秒（6 個演算法）| **記憶體峰值**：~430 MB（process peak RSS）
 
 ---
 
@@ -379,13 +379,13 @@ LOAD EXTENSION algo;
 |------|------|
 | I/O（讀節點 + 邊） | 0.25 秒 |
 | 建圖（nx.DiGraph） | 4.8 秒 |
-| **3 個算法執行** | **8.2 秒** |
+| **3 個演算法執行** | **8.2 秒** |
 | ├─ PageRank | 5.5 秒 |
 | ├─ WCC | 0.9 秒 |
 | └─ SCC | 1.8 秒 |
 | **總耗時（end-to-end）** | **13.2 秒** |
 
-**記憶體峰值**：1.73 GB（process peak RSS——整個圖 + 中間結果都在內存）
+**記憶體峰值**：1.73 GB（process peak RSS——整個圖 + 中間結果都在記憶體）
 
 兩邊結果互相驗證一致：WCC 都是 7 個分量、SCC 都是 1,588 個分量
 
@@ -393,7 +393,7 @@ LOAD EXTENSION algo;
 
 # 實測對比：Ladybug vs. Python + NetworkX
 
-**M1 Pro，340 萬邊，相同 3 個算法（PageRank / WCC / SCC）**
+**M1 Pro，340 萬邊，相同 3 個演算法（PageRank / WCC / SCC）**
 
 | 項目 | Ladybug | Python + NetworkX |
 |------|---------|------------------|
@@ -413,7 +413,7 @@ LOAD EXTENSION algo;
 - ✅ 知道有六個圖論問題的常用解法
 - ✅ 理解每個 algorithm 在解什麼問題
 - ✅ 親手跑過一次，看到結果（40 萬節點的圖，秒級出結果）
-- ✅ **知道選型依據**：什麼問題選什麼算法、什麼場景選 Cypher、什麼場景選 ALGO
+- ✅ **知道選型依據**：什麼問題選什麼演算法、什麼場景選 Cypher、什麼場景選 ALGO
 - ✅ **明白 in-database 的價值**：資料不動，演算法進去 → 省記憶體、規模上限高
 
 下堂課：結果出來了，怎麼讓人看得懂它的推理過程？
