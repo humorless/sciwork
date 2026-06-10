@@ -341,6 +341,7 @@ MATCH ()-[f:follows]->() RETURN COUNT(f) AS follows_count
 **載入 ALGO 擴展**：
 
 ```cypher
+INSTALL ALGO;
 LOAD EXTENSION algo;
 ```
 
