@@ -43,8 +43,8 @@ lbug --version
 | 檔案 | 用途 | 來源 |
 |------|------|------|
 | `supply-chain.cypher` | Unit 1-2 的示例資料集（8 個節點、12 條邊） | 本項目提供 |
-| `schema.cypher` | Unit 3 的資料庫模式定義 | 本項目提供 |
-| `amazon-nodes.csv`<br/>`amazon-edges.csv` | Unit 3-4 的 Amazon follow graph（~403k 節點、~3.4M 邊） | 需從 SNAP 下載 |
+| `schema.cypher` | Unit 3 的資料庫模式定義 | LadybugDB 官方 dataset |
+| `amazon-nodes.csv`<br/>`amazon-edges.csv` | Unit 3-4 的 Amazon follow graph（~403k 節點、~3.4M 邊） | LadybugDB 官方 dataset |
 
 **Amazon dataset 下載**：
 
