@@ -41,8 +41,8 @@ node.ID: 45  rank: 0.001586
 ```
 
 數字本身說不出理由，但 PageRank 不同於黑箱模型——
-它是基於圖結構的。反向查詢：「有哪些高排名的帳戶關注了 45？」
-答案就是推薦理由。
+它是基於圖結構的。要解釋「為什麼 45 的排名這麼高」：反向查詢「有哪些高排名的帳戶關注了 45？」
+這個路徑就是排名的成因。
 
 ---
 
@@ -68,31 +68,48 @@ node.ID: 45  rank: 0.001586
 
 ---
 
-# 路徑就是解釋
+# 路徑就是解釋：為什麼 45 的排名高？
 
-**Query**：
+**Query**（反向路徑）：
 
 ```cypher
+-- 一跳反向：誰關注了 45？
+MATCH (in1:account)-[:follows]->(p:account {ID: 45})
+RETURN in1.ID AS follower, in1.rank
+ORDER BY in1.rank DESC
+LIMIT 10
+```
+
+**進一步理解：二跳反向**
+
+```cypher
+-- 二跳反向：誰關注了那些關注 45 的人？
+MATCH (in2:account)
+      -[:follows]->(in1:account)
+      -[:follows]->(p:account {ID: 45})
+RETURN in2.ID, in2.rank, in1.ID, in1.rank
+ORDER BY in2.rank DESC
+LIMIT 10
+```
+
+**結論**：45 的排名高，因為有這些高排名的帳戶指向它（直接或間接）。路徑本身解釋了結果。
+
+---
+
+# 推薦系統：路徑的另一個應用
+
+**正向路徑**用於推薦：
+
+```cypher
+-- 45 關注的人，也都關注了誰？
 MATCH (p:account {ID: 45})
       -[:follows]->(mid:account)
       -[:follows]->(reco:account)
 WHERE reco <> p
-RETURN p.ID AS source,
-       mid.ID AS via,
-       reco.ID AS recommended
-LIMIT 10
+RETURN mid.ID AS via, reco.ID AS recommended
 ```
 
-**輸出**：
-
-```
-source  via   recommended
-────    ─────  ──────────
-45      1036   1037
-45      1036   50
-```
-
-推薦理由就在 `via` 這一欄——帳戶 45 關注了 1036，而 1036 也關注了 1037，所以推薦 45 去關注 1037。
+推薦理由：「你關注了 mid，而 mid 也關注了 recommended，所以推薦 recommended」
 
 ---
 
@@ -158,67 +175,107 @@ source  via   recommended
 
 # 實作目標（40 min）
 
-1. ✅ 查詢推薦路徑，確認結果可解釋
-2. ✅ 觀察表格結果，找出影響力節點
-3. ✅ 自己修改 query，設計推薦邏輯
-4. ✅ 開放討論：你的系統有沒有 Graph 的機會？
+1. ✅ 準備 PageRank 數據（導入到數據庫）
+2. ✅ 查詢反向路徑 + 排名，確認結果可解釋
+3. ✅ 觀察表格結果，找出影響力節點
+4. ✅ 自己修改 query，設計分析邏輯
 
 ---
 
-# Step 1（10 min）：路徑查詢
+# 準備階段：創建表
+
+**思路**：PageRank 結果 → 獨立表 → JOIN 查詢
 
 ```cypher
--- 兩跳推薦路徑：45 → via → recommended
-MATCH (p:account {ID: 45})
-      -[:follows]->(mid:account)
-      -[:follows]->(reco:account)
-WHERE reco <> p
-RETURN p.ID AS source,
-       mid.ID AS via,
-       reco.ID AS recommended
-ORDER BY reco.ID
-LIMIT 20
+CREATE NODE TABLE account_pagerank
+  (account_id INT64 PRIMARY KEY, rank DOUBLE);
 ```
 
-確認每一行都能說出推薦理由：「45 關注了 via，via 也關注了 recommended」
+---
+
+# 準備階段：導入 + 計算
+
+**導入 CSV**
+```cypher
+COPY account_pagerank FROM 'pagerank.csv'
+  (HEADER=TRUE, DELIMITER=',');
+```
+
+**計算 PageRank**
+```cypher
+CALL project_graph('Graph', ['account'], ['follows']);
+CALL page_rank('Graph') RETURN node.ID, rank;
+```
+
+✅ 現在可以 JOIN 查詢
 
 ---
 
-# Step 2（15 min）：觀察結果模式
-
-在 Ladybug Explorer 執行 Step 1 的 query，看表格結果找規律：
-
-**看表格找規律**：
-- 有多少條推薦路徑？
-- 哪個中間節點（via）出現最頻繁？ 
-  （這意味著它最有影響力）
-- 相同的 via 對應多少個不同的推薦目標？
-
-**修改 query 來測試**：
-- 改成其他起點帳戶：`{ID: 50}`、`{ID: 1036}`
-  → 觀察不同用戶的推薦模式有什麼不同
-- 擴展到三跳路徑看會有什麼變化
-
----
-
-# Step 3（10 min）：設計你的推薦邏輯
-
-不只是「A 關注的人關注 B」，你可以加上條件，篩選值得追蹤的帳戶：
+# Step 1：一跳反向 + 排名
 
 ```cypher
--- 只推薦被很多人關注的帳戶
-MATCH (p:account {ID: 45})
-      -[:follows]->(mid:account)
-      -[:follows]->(reco:account)
-WHERE reco <> p
-WITH reco, COUNT(*) AS paths
-WHERE paths >= 2  -- 至少有 2 條獨立推薦路徑
-RETURN reco.ID, paths
-ORDER BY paths DESC
-LIMIT 10
+MATCH (in1)-[:follows]->(p:account {ID: 45})
+MATCH (pr:account_pagerank {account_id: in1.ID})
+RETURN in1.ID, pr.rank
+ORDER BY pr.rank DESC LIMIT 20
 ```
 
-**你在做的事**：設計邏輯（篩選條件），不是調參數
+**結果**：`1036 (0.001380)` ← 最高排名的 follower
+
+高排名帳戶指向 45 ⟹ 45 排名高
+
+---
+
+# Step 2：二跳反向路徑
+
+```cypher
+MATCH (in2)-[:follows]->(in1)-[:follows]->(p:account {ID: 45})
+MATCH (pr2:account_pagerank {account_id: in2.ID})
+RETURN in2.ID, pr2.rank, in1.ID
+ORDER BY pr2.rank DESC LIMIT 20
+```
+
+**結果**：間接指向 45 的路徑
+
+```
+in2.ID  │ rank     │ via
+────────┼──────────┼─────
+403392  │ 0.000025 │ 1041
+403367  │ 0.000021 │ 1041
+```
+
+**試試** `{ID: 50}` 或 `{ID: 1036}`
+
+---
+
+# Step 3A：統計直接 Follower
+
+```cypher
+MATCH (in1)-[:follows]->(p:account {ID: 45})
+MATCH (pr:account_pagerank {account_id: in1.ID})
+RETURN COUNT(*) followers,
+       SUM(pr.rank) total_rank,
+       AVG(pr.rank) avg_rank
+```
+
+---
+
+# Step 3B：最重要的「中介」
+
+```cypher
+MATCH (in2)-[:follows]->(in1)-[:follows]->(p:account {ID: 45})
+MATCH (pr:account_pagerank {account_id: in1.ID})
+RETURN in1.ID, COUNT(DISTINCT in2) upstream
+ORDER BY upstream DESC LIMIT 10
+```
+
+**結果**：
+```
+in1.ID │ upstream
+───────┼──────
+1041   │ 2751 ← 關鍵樞紐
+1036   │ 564
+```
 
 ---
 
