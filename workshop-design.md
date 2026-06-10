@@ -7,7 +7,7 @@
 **Dataset 策略**
 - 基礎練習：手建 Supply chain（BOM）小型 dataset（8 個節點、12 條邊），講者提供，不需下載
 - Unit 1-2 練習：Supply chain dataset + Social network dataset
-- Unit 3-4 主線實作：Amazon follow graph（SNAP amazon0601）——社交網絡，account/follows 關係
+- Unit 3-4 主線實作：Amazon co-purchase graph（SNAP amazon0601）——官方以 account/follows 社交網絡 schema 發布
 
 ---
 
@@ -62,7 +62,7 @@
 
 **實作（40 min）**
 
-在 Amazon follow graph（SNAP amazon0601，account/follows 關係）上依序解決六個演算法問題，每個只花 5-7 分鐘，目標是「看到結果、知道它在算什麼」，不是深入原理：
+在 Amazon co-purchase graph（SNAP amazon0601，account/follows schema）上依序解決六個演算法問題，每個只花 5-7 分鐘，目標是「看到結果、知道它在算什麼」，不是深入原理：
 
 | Algorithm | 問的問題 | 實現方式 |
 |---|---|---|

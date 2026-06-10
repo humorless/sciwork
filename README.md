@@ -45,7 +45,7 @@ lbug --version
 | `supply-chain.cypher` | Unit 1-2 的示例資料集（8 個節點、12 條邊） | 本項目提供 |
 | `social-network.cypher` | Unit 2 的 Social Network dataset（10 個節點、18 條邊） | 本項目提供 |
 | `schema.cypher` | Unit 3 的資料庫模式定義 | LadybugDB 官方 dataset |
-| `amazon-nodes.csv`<br/>`amazon-edges.csv` | Unit 3-4 的 Amazon follow graph（~403k 節點、~3.4M 邊） | LadybugDB 官方 dataset |
+| `amazon-nodes.csv`<br/>`amazon-edges.csv` | Unit 3-4 的 Amazon co-purchase graph，官方以 `account / follows` schema 發布（~403k 節點、~3.4M 邊） | LadybugDB 官方 dataset |
 
 **Amazon dataset 下載**：
 

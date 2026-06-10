@@ -53,7 +53,7 @@ DB ──► 演算法直接在 DB 裡跑 ──► 回傳結果（已聚合）
 
 # 今天的實作方式
 
-**Dataset**：Amazon follow graph（來自 SNAP）
+**Dataset**：Amazon co-purchase graph（SNAP amazon0601，官方以 `account / follows` schema 發布）
 
 每個 algorithm 花 **5–7 分鐘**：
 1. 看一句話說明：這個 algorithm 在解什麼問題
@@ -220,6 +220,7 @@ WHERE b.ID = 1036
 RETURN a.ID AS source,
        b.ID AS target,
        length(path) AS hops
+ORDER BY hops ASC
 LIMIT 5
 ```
 
